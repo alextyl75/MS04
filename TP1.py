@@ -124,7 +124,8 @@ X = points[0]
 Y = points[1]
 
 plt.figure(figsize=(6, 6))
-
+milieux = (X + Y)/2
+longueurs = np.sqrt(X**2 + Y**2)
 # Tracé des arêtes directement à partir de la liste des segments
 for noeud1, noeud2 in segments:
     plt.plot([X[noeud1], X[noeud2]], [Y[noeud1], Y[noeud2]], color='blue')
