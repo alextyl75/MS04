@@ -94,11 +94,15 @@ def u_diff(r, theta, k, a, N):
         sum += ((-1j)**n * jv(n, k*a) / hankel1(n, k*a))* hankel1(n, k*r) * np.exp(1j*n*theta)
     return -sum
 
-def trace_u(r, theta, k, a, N):
+def trace_u_d(r, theta, k, a, N):
     sum = 0
     for n in range(-N, N + 1):
         sum += ((-1j)**n * jv(n, k*a) / hankel1(n, k*a))* ( hankel1(n-1, k*r) - hankel1(n+1, k*r)) * np.exp(1j*n*theta)
     return -(k/2)*sum
+
+def trace_u(r, theta, k, a, N):
+    trace_u_inc = -1j*k*np.cos(theta)*np.exp(-1j*k*r*np.cos(theta))
+    return (-trace_u_d(r, theta, k, a, N)-trace_u_inc)
 
 # --- Question 1---
 
@@ -231,7 +235,7 @@ for h in h_tab:
 
             erreur += np.abs(
                 approx_derive
-                - trace_u(r, theta, k, a, N_serie)
+                - trace_u_d(r, theta, k, a, N_serie)
             )
 
     erreur /= len(r_tab) * len(theta_tab)
