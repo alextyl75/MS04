@@ -74,9 +74,9 @@ def affichage_maillage(points,segments,milieux,longueurs,normales):
 
     # 4. Tracé des arêtes (vecteurs normaux, flèches oranges)
     # On utilise quiver pour tracer les vecteurs en partant des milieux
-    aretes_X = aretes[:, 0]
-    aretes_Y = aretes[:, 1]
-    plt.quiver(milieux_X, milieux_Y, aretes_X, aretes_Y, 
+    normales_X = normales[:, 0]
+    normales_Y = normales[:, 1]
+    plt.quiver(milieux_X, milieux_Y, normales_X, normales_Y, 
                color='orange', angles='xy', scale_units='xy', scale=1, 
                width=0.005, zorder=2, label="Vecteurs (arêtes)")
 
@@ -100,9 +100,57 @@ def trace_u_d(r, theta, k, a, N):
         sum += ((-1j)**n * jv(n, k*a) / hankel1(n, k*a))* ( hankel1(n-1, k*r) - hankel1(n+1, k*r)) * np.exp(1j*n*theta)
     return -(k/2)*sum
 
+def cylindrique_to_cartesien(r,theta):
+    return [r*np.cos(theta),r*np.sin(theta)]
+
+def cartesien_to_cylindrique(x, y):
+    r = np.sqrt(x**2 + y**2)
+    theta = np.arctan2(y, x)
+    return [r, theta]
+
 def p(r, theta, k, a, N):
     trace_u_inc = -1j*k*np.cos(theta)*np.exp(-1j*k*r*np.cos(theta))
     return (-trace_u_d(r, theta, k, a, N)-trace_u_inc)
+
+def affiche_p(milieux, k, a, N):
+    # 1. Extraction des coordonnées cartésiennes des milieux
+    x = milieux[:, 0]
+    y = milieux[:, 1]
+    
+    # 2. Conversion en coordonnées cylindriques
+    r, theta = cartesien_to_cylindrique(x, y)
+    
+    # 3. Évaluation de la fonction p sur tous les milieux
+    # (Assure-toi que trace_u_d est bien définie et vectorisée dans ton script)
+    valeurs_p = p(r, theta, k, a, N)
+    
+    p_reel = np.real(valeurs_p)
+    p_imag = np.imag(valeurs_p)
+    
+    # 4. Création de la figure à deux volets (1 ligne, 2 colonnes)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+    
+    # --- Sous-graphique 1 : Partie Réelle ---
+    # On trace les points avec une couleur (c) dépendante de la valeur
+    sc1 = ax1.scatter(x, y, c=p_reel, cmap='coolwarm', s=50, edgecolor='black', zorder=2)
+    ax1.plot(x, y, color='gray', linestyle='--', alpha=0.5, zorder=1) # Ligne pointillée de fond
+    ax1.set_title("Partie Réelle de p")
+    ax1.axis('equal')
+    ax1.grid(True, linestyle=':', alpha=0.7)
+    # Ajout de la barre de couleur spécifique à ce graphique
+    plt.colorbar(sc1, ax=ax1, fraction=0.046, pad=0.04)
+
+    # --- Sous-graphique 2 : Partie Imaginaire ---
+    sc2 = ax2.scatter(x, y, c=p_imag, cmap='coolwarm', s=50, edgecolor='black', zorder=2)
+    ax2.plot(x, y, color='gray', linestyle='--', alpha=0.5, zorder=1)
+    ax2.set_title("Partie Imaginaire de p")
+    ax2.axis('equal')
+    ax2.grid(True, linestyle=':', alpha=0.7)
+    plt.colorbar(sc2, ax=ax2, fraction=0.046, pad=0.04)
+    
+    fig.suptitle(f"Visualisation du champ p sur la frontière (k={k}, N={N})", fontsize=14)
+    plt.tight_layout()
+    plt.show()
 
 # --- Question 1---
 
@@ -196,11 +244,11 @@ plt.tight_layout()
 
 # --- Question 2---
 
-points,segments,milieux,longueurs,aretes = maillage_segments(N, a, forme="etoile")
+points,segments,milieux,longueurs,normales = maillage_segments(N, a, forme="cercle")
 
 print("Liste des segments :")
 print(segments)
-affichage_maillage(points,segments,milieux,longueurs,aretes)
+affichage_maillage(points,segments,milieux,longueurs,normales)
 
 
 
@@ -276,3 +324,6 @@ plt.text(
 plt.grid(True, which="both")
 
 plt.show()
+
+##Q4
+affiche_p(milieux, k, a, N)
