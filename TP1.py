@@ -100,7 +100,7 @@ def trace_u_d(r, theta, k, a, N):
         sum += ((-1j)**n * jv(n, k*a) / hankel1(n, k*a))* ( hankel1(n-1, k*r) - hankel1(n+1, k*r)) * np.exp(1j*n*theta)
     return -(k/2)*sum
 
-def trace_u(r, theta, k, a, N):
+def p(r, theta, k, a, N):
     trace_u_inc = -1j*k*np.cos(theta)*np.exp(-1j*k*r*np.cos(theta))
     return (-trace_u_d(r, theta, k, a, N)-trace_u_inc)
 
