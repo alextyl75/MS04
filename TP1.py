@@ -94,6 +94,12 @@ def u_diff(r, theta, k, a, N):
         sum += ((-1j)**n * jv(n, k*a) / hankel1(n, k*a))* hankel1(n, k*r) * np.exp(1j*n*theta)
     return -sum
 
+def trace_u(r, theta, k, a, N):
+    sum = 0
+    for n in range(-N, N + 1):
+        sum += ((-1j)**n * jv(n, k*a) / hankel1(n, k*a))* ( hankel1(n-1, k*r) - hankel1(n+1, k*r)) * np.exp(1j*n*theta)
+    return -(k/2)*sum
+
 # --- Question 1---
 
 # Test fonction implementation somme partielle : on conserve Nserie = 20
@@ -182,9 +188,7 @@ plt.text(
 )
 
 plt.tight_layout()
-plt.show()
-
-
+#plt.show()
 
 # --- Question 2---
 
@@ -196,4 +200,75 @@ affichage_maillage(points,segments,milieux,longueurs,aretes)
 
 
 
+# --- Question 3---
 
+h_tab = [10**(-i) for i in range(1, 9)]
+
+r_tab = [1 + i/10 for i in range(10)]
+
+N_serie = 15
+
+erreur_tab = []
+
+theta_tab = [2*np.pi*i/10 for i in range(10)]
+
+k = 5
+
+a = 1
+
+for h in h_tab:
+
+    erreur = 0
+
+    for r in r_tab:
+
+        for theta in theta_tab:
+
+            approx_derive = (
+                u_diff(r + h, theta, k, a, N_serie)
+                - u_diff(r, theta, k, a, N_serie)
+            ) / (h)
+
+            erreur += np.abs(
+                approx_derive
+                - trace_u(r, theta, k, a, N_serie)
+            )
+
+    erreur /= len(r_tab) * len(theta_tab)
+
+    erreur_tab.append(erreur)
+
+print(h_tab)
+print(erreur_tab)
+
+# --- Représentation de l'erreur ---
+plt.figure()
+
+plt.loglog(h_tab, erreur_tab, 'o-')
+
+plt.xlabel(r"$h$")
+plt.ylabel(r"Erreur")
+
+plt.title(
+    r"Erreur $\left|p-\frac{u^+(r+h,\theta)-u^+(r,\theta)}{h}\right|$ en fonction de h"
+)
+
+# Informations sur les paramètres
+plt.text(
+    0.97, 0.97,
+    rf"$a = {a}$" + "\n" +
+    rf"$k = {k}$" + "\n" +
+    rf"$N_{{serie}} = {N_serie}$",
+    transform=plt.gca().transAxes,
+    ha="right",
+    va="top",
+    bbox=dict(
+        boxstyle="round",
+        facecolor="white",
+        alpha=0.8
+    )
+)
+
+plt.grid(True, which="both")
+
+plt.show()
