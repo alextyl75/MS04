@@ -13,43 +13,13 @@ def maillage_segments(N, a, forme):
         points = a * np.array([np.cos(angles), np.sin(angles)])
         
     elif forme == "carre":
-        # pts_x = []
-        # pts_y = []
-        
-        # # Idéalement N doit être un multiple de 4 pour une symétrie parfaite.
-        # n_cote = N // 4 
-        # n_list = [n_cote, n_cote, n_cote, N - 3*n_cote] # Gère le reste si N % 4 != 0
-        
-
-        
-        # # Côté 2 (Droite) : de (a, -a) vers (a, a) exclus
-        # pts_x.extend([a] * n_list[1])
-        # pts_y.extend(np.linspace(-a, a, n_list[1], endpoint=False))
-        
-        # # Côté 3 (Haut) : de (a, a) vers (-a, a) exclus
-        # pts_x.extend(np.linspace(a, -a, n_list[2], endpoint=False))
-        # pts_y.extend([a] * n_list[2])
-        
-        # # Côté 4 (Gauche) : de (-a, a) vers (-a, -a) exclus
-        # pts_x.extend([-a] * n_list[3])
-        # pts_y.extend(np.linspace(a, -a, n_list[3], endpoint=False))
-
-        # # Côté 1 (Bas) : de (-a, -a) vers (a, -a) exclus
-        # pts_x.extend(np.linspace(-a, a, n_list[0], endpoint=False))
-        # pts_y.extend([-a] * n_list[0])
-        
-        # points = np.array([pts_x, pts_y])
-    
-
-
         # 1. On calcule les coordonnées sur le cercle unitaire
         x_cercle = np.cos(angles)
         y_cercle = np.sin(angles)
         
-        # 2. On trouve la norme maximale pour chaque point (le plus grand entre |x| et |y|)
+  
         norme_infinie = np.maximum(np.abs(x_cercle), np.abs(y_cercle))
         
-        # 3. On divise par cette norme pour ramener les points sur les bords d'un carré
         points = a * np.array([x_cercle / norme_infinie, y_cercle / norme_infinie])
         
     elif forme == "etoile":
@@ -57,7 +27,6 @@ def maillage_segments(N, a, forme):
         rayon = a * (1 + 0.4 * np.cos(5 * angles))
         points = np.array([rayon * np.cos(angles), rayon * np.sin(angles)])
     
-    # Création directe de la liste des segments avec le modulo N
     segments = [[i, (i + 1) % N] for i in range(N)]
     milieux = 0.5*np.array([[points[0][i]+ points[0][(i + 1) % N], points[1][i]+ points[1][(i + 1) % N] ] for i in range(N)])
     longueurs = np.sqrt(np.array([(points[0][i] - points[0][(i + 1) % N])**2 + (points[1][i] - points[1][(i + 1) % N])**2  for i in range(N)]))
@@ -71,29 +40,27 @@ def affichage_maillage(points, segments, milieux, longueurs, normales):
 
     plt.figure(figsize=(12, 12))
 
-    # 1. Tracé des segments (lignes bleues)
     for noeud1, noeud2 in segments:
         plt.plot([X[noeud1], X[noeud2]], [Y[noeud1], Y[noeud2]], color='blue', zorder=1)
 
-    # 2. Tracé des points / noeuds (rouges)
     plt.scatter(X, Y, color='red', s=50, zorder=3, label="Noeuds")
 
-    # 3. Tracé des milieux (verts)
+
     milieux_X = milieux[:, 0]
     milieux_Y = milieux[:, 1]
     plt.scatter(milieux_X, milieux_Y, color='green', s=30, zorder=3, label="Milieux")
 
-    # 4. Tracé des normales (flèches oranges)
+
     normales_X = normales[:, 0]
     normales_Y = normales[:, 1]
     plt.quiver(milieux_X, milieux_Y, normales_X, normales_Y, 
                color='orange', angles='xy', scale_units='xy', scale=1, 
                width=0.005, zorder=2, label="Normales sortantes")
 
-    ax = plt.gca() # Récupère l'axe courant (Get Current Axis)
+    ax = plt.gca() 
     ax.set_aspect('equal', adjustable='box')
     
-    # On applique la marge fixe
+
     marge = 0.4
     plt.xlim(np.min(X) - marge, np.max(X) + marge)
     plt.ylim(np.min(Y) - marge, np.max(Y) + marge)
@@ -132,31 +99,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def affiche_p(milieux, k, a, N):
-    # 1. Extraction des coordonnées cartésiennes des milieux
     x = milieux[:, 0]
     y = milieux[:, 1]
     
-    # 2. Conversion en coordonnées cylindriques
     r, theta = cartesien_to_cylindrique(x, y)
     
-    # 3. Évaluation de la fonction p sur tous les milieux
     valeurs_p = p(r, theta, k, a, N)
     
     p_reel = np.real(valeurs_p)
     p_imag = np.imag(valeurs_p)
     
-    # --- AJOUT : Calcul des limites globales et symétriques ---
-    # On cherche la plus grande valeur absolue pour centrer le 0
     val_max = max(np.max(np.abs(p_reel)), np.max(np.abs(p_imag)))
     vmin = -val_max
     vmax = val_max
     # ----------------------------------------------------------
     
-    # 4. Création de la figure à deux volets (1 ligne, 2 colonnes)
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
     
-    # --- Sous-graphique 1 : Partie Réelle ---
-    # Ajout de vmin et vmax pour fixer l'échelle
     sc1 = ax1.scatter(x, y, c=p_reel, cmap='coolwarm', vmin=vmin, vmax=vmax, s=50, edgecolor='black', zorder=2)
     ax1.plot(x, y, color='gray', linestyle='--', alpha=0.5, zorder=1)
     ax1.set_title("Partie Réelle de p")
@@ -164,8 +124,6 @@ def affiche_p(milieux, k, a, N):
     ax1.grid(True, linestyle=':', alpha=0.7)
     plt.colorbar(sc1, ax=ax1, fraction=0.046, pad=0.04)
 
-    # --- Sous-graphique 2 : Partie Imaginaire ---
-    # Ajout de vmin et vmax pour fixer l'échelle (identique au 1er graphique)
     sc2 = ax2.scatter(x, y, c=p_imag, cmap='coolwarm', vmin=vmin, vmax=vmax, s=50, edgecolor='black', zorder=2)
     ax2.plot(x, y, color='gray', linestyle='--', alpha=0.5, zorder=1)
     ax2.set_title("Partie Imaginaire de p")
