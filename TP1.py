@@ -23,8 +23,8 @@ def integrale_monome(a, b, deg):
 # Point tests 
 a = 0
 b = 1
-deg_test = 20
-nq_test = 6
+deg_test = 10
+nq_test = 3
 
 deg_test_tab = [i for i in range(1,deg_test)]
 integrale_quad_tab = []
@@ -53,10 +53,9 @@ plt.semilogy(
     deg_test_tab,
     error_tab,
     'o-',
-    label=f"Quadrature de Gauss-Legendre ($n_q={nq_test}$)"
 )
 
-plt.xlabel("Degré du polynôme")
+plt.xlabel("Degré du monôme")
 plt.ylabel("Erreur absolue")
 plt.title(
     f"Erreur de la quadrature en fonction du degré "
