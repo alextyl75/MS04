@@ -90,14 +90,16 @@ def G(x,y):
     return 0
 
 quad, milieux = []
-p =[]
+p = np.array()
 
-M = 1
-def A(x, N): #quad est une quadrature (tableau de taille n_q) contenant les tableaux poid,point
-    A = np.array(N,M)
-    for i in range(N):
-        for j in range(M):
-            A[i][j] = quad[0][j] * G(x, 0.5* ((points[segments[0][i]] + points[segments[1][i]]) + quad[1][j]*(points[segments[1][i]] - points[segments[0][i]]))) * longueurs[i]/2
-def u(x,p):
-    return A(x,n)*p
+X = np.array()
+def A(X, N,nq): #quad est une quadrature (tableau de taille n_q) contenant les tableaux poid,point
+    A = np.array(N,len(X))
+    for i in range(len(X)):
+        for j in range(N):
+            A[i][j] = quad_Green(G,X[i],points[segments[0][J]],points[segments[1][j]],nq) G(x, 0.5* ((points[segments[0][i]] + points[segments[1][i]]) + quad[1][j]*(points[segments[1][i]] - points[segments[0][i]]))) * longueurs[i]/2
+def u(X,N,p,nq):
+    return A(X,N,nq)*p
+
+
     
