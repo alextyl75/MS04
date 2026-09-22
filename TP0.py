@@ -37,7 +37,7 @@ for k in k_tab:
 
             erreur += np.abs(
                 np.exp(-1j * k * a * np.cos(theta))
-                + u_diff(a, theta, k, a, N_serie)
+                + fonctions.u_diff(a, theta, k, a, N_serie)
             )
 
         erreur_moyenne = erreur / Nb_points

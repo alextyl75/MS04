@@ -8,7 +8,6 @@ def maillage_segments(N, a, forme):
     angles = np.array([2*np.pi*k/N for k in range(0, N)])
     if forme == "cercle":
         points = a * np.array([np.cos(angles), np.sin(angles)])
-        
     elif forme == "carre":
         # 1. On calcule les coordonnées sur le cercle unitaire
         x_cercle = np.cos(angles)
@@ -24,16 +23,17 @@ def maillage_segments(N, a, forme):
         rayon = a * (1 + 0.4 * np.cos(5 * angles))
         points = np.array([rayon * np.cos(angles), rayon * np.sin(angles)])
     
+    points = points.T #mettre au format (N,2)
     segments = [[i, (i + 1) % N] for i in range(N)]
-    milieux = 0.5*np.array([[points[0][i]+ points[0][(i + 1) % N], points[1][i]+ points[1][(i + 1) % N] ] for i in range(N)])
-    longueurs = np.sqrt(np.array([(points[0][i] - points[0][(i + 1) % N])**2 + (points[1][i] - points[1][(i + 1) % N])**2  for i in range(N)]))
-    normales = -np.array([[(points[1][i] - points[1][(i + 1) % N]), ( points[0][(i + 1) % N] - points[0][i])]/longueurs[i]  for i in range(N)])
+    milieux = 0.5*np.array([[points[i][0]+ points[(i + 1) % N][0], points[i][1]+ points[(i + 1) % N][1] ] for i in range(N)])
+    longueurs = np.sqrt(np.array([(points[i][0] - points[(i + 1) % N][0])**2 + (points[i][1] - points[(i + 1) % N][1])**2  for i in range(N)]))
+    normales = -np.array([[(points[i][1] - points[(i + 1) % N][1]), ( points[(i + 1) % N][0] - points[i][0])]/longueurs[i]  for i in range(N)])
 
     return points,segments,milieux,longueurs,normales
 
 def affichage_maillage(points, segments, milieux, longueurs, normales):
-    X = points[0]
-    Y = points[1]
+    X = points[:,0]
+    Y = points[:,1]
 
     plt.figure(figsize=(12, 12))
 
@@ -68,15 +68,15 @@ def affichage_maillage(points, segments, milieux, longueurs, normales):
     plt.show()
 
 
-def u_diff(r, theta, k, a, N):
+def u_diff(r, theta, k, a, N_serie):
     sum = 0
-    for n in range(-N, N + 1):
+    for n in range(-N_serie, N_serie + 1):
         sum += ((-1j)**n * jv(n, k*a) / hankel1(n, k*a))* hankel1(n, k*r) * np.exp(1j*n*theta)
     return -sum
 
-def trace_u_d(r, theta, k, a, N):
+def trace_u_d(r, theta, k, a, N_serie):
     sum = 0
-    for n in range(-N, N + 1):
+    for n in range(-N_serie, N_serie + 1):
         sum += ((-1j)**n * jv(n, k*a) / hankel1(n, k*a))* ( hankel1(n-1, k*r) - hankel1(n+1, k*r)) * np.exp(1j*n*theta)
     return -(k/2)*sum
 
@@ -88,19 +88,20 @@ def cartesien_to_cylindrique(x, y):
     theta = np.arctan2(y, x)
     return [r, theta]
 
-def p(r, theta, k, a, N):
+def p(r, theta, k, a, N): #N est le nombre de terme de la série
     trace_u_inc = -1j*k*np.cos(theta)*np.exp(-1j*k*r*np.cos(theta))
     return (-trace_u_d(r, theta, k, a, N)-trace_u_inc)
 
 
 
-def affiche_p(milieux, k, a, N):
+
+def affiche_p(milieux, k, a, N_serie):
     x = milieux[:, 0]
     y = milieux[:, 1]
     
     r, theta = cartesien_to_cylindrique(x, y)
     
-    valeurs_p = p(r, theta, k, a, N)
+    valeurs_p = p(r, theta, k, a, N_serie)
     
     p_reel = np.real(valeurs_p)
     p_imag = np.imag(valeurs_p)
@@ -127,6 +128,6 @@ def affiche_p(milieux, k, a, N):
     ax2.grid(True, linestyle=':', alpha=0.7)
     plt.colorbar(sc2, ax=ax2, fraction=0.046, pad=0.04)
     
-    fig.suptitle(f"Visualisation du champ p sur la frontière (k={k}, N={N})", fontsize=14)
+    fig.suptitle(f"Visualisation du champ p sur la frontière (k={k}, N={N_serie})", fontsize=14)
     plt.tight_layout()
     plt.show()
