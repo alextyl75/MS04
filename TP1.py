@@ -65,13 +65,10 @@ plt.xticks(deg_test_tab)
 plt.grid(True, which="both")
 plt.legend()
 
-plt.show()
+# plt.show()
 
 
 ##question 3
-
-
-
 
 
 def quad_Green(G, x, a, b, nq):
@@ -85,11 +82,13 @@ def quad_Green(G, x, a, b, nq):
 
     return sum
 
+
+
 def G(x,y):
     return 1j*hankel1(0, k*np.linalg.norm(x-y))/4
 
 
-def A(X, N, nq): #quad est une quadrature (tableau de taille n_q) contenant les tableaux poid,point
+def A(X, points, segments, N, nq, k): #quad est une quadrature (tableau de taille n_q) contenant les tableaux poid,point
     n_obs = np.shape(X)[0]
     A = np.zeros((n_obs,N), dtype=complex)
     print("A",np.shape(A))
@@ -98,8 +97,10 @@ def A(X, N, nq): #quad est une quadrature (tableau de taille n_q) contenant les 
         for j in range(N):
             A[i][j] = quad_Green(G,X[i,:],points[segments[j][0]],points[segments[j][1]],nq)
     return A
-def u(X,N,p,nq):
-    return A(X,N,nq)@p
+
+
+def u(X, points, segments, N, p, nq, k):
+    return A(X, points, segments, N, nq, k) @ p
 
 def calcul_p(milieux, k, a, N_serie):
     x = milieux[:, 0]
@@ -109,32 +110,6 @@ def calcul_p(milieux, k, a, N_serie):
     
     return fonctions.p(r, theta, k, a, N_serie)
 
-
-#Question 4 TEST
-# a = 1
-# N = 100
-# N_serie = 30
-# k=5
-# points,segments,milieux,longueurs,normales = fonctions.maillage_segments(N, a, forme="cercle")
-# valeurs_p = calcul_p(milieux,k,a,N_serie)
-# print("p",np.shape(valeurs_p))
-
-# print("segmets",np.shape(segments))
-# r_obs = 5
-# N_obs = 10
-# X,_,_,_,_ = fonctions.maillage_segments(N_obs,r_obs, forme="cercle")
-# print("X",np.shape(X))
-# nq = 4 #ordre de quadrature
-# u_X = u(X,N,valeurs_p,nq)
-# R_obs,Theta_obs = fonctions.cartesien_to_cylindrique(X[:,0],X[:,1])
-# u_analytique = fonctions.u_diff(R_obs,Theta_obs,k,a,N_serie)
-
-# print(np.shape(u_analytique),np.shape(u_X))
-# print(u_analytique)
-# print(u_X)
-
-
-# print(u_analytique-u_X)
 
 def calcul_erreur_relative(u_num, u_ref):
     """
@@ -147,18 +122,33 @@ def calcul_erreur_relative(u_num, u_ref):
 
 def plot_champ_sur_points(X, u_valeurs, titre="Champ sur les points d'observation"):
     """
-    Affiche la partie réelle du champ u évalué sur un nuage de points X en 2D.
+    Affiche la partie réelle et la partie imaginaire du champ u évalué
+    sur un nuage de points X en 2D côte à côte.
     """
-    plt.figure(figsize=(7, 6))
-    # On colorie les points en fonction de la partie réelle du champ
-    sc = plt.scatter(X[:, 0], X[:, 1], c=np.real(u_valeurs), cmap='RdBu_r', s=50, edgecolors='k')
-    plt.colorbar(sc, label="Re(u)")
-    
-    plt.title(titre)
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.axis('equal')
-    plt.grid(True, linestyle='--', alpha=0.6)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6), sharex=True, sharey=True)
+
+    # Partie réelle
+    sc_re = ax1.scatter(X[:, 0], X[:, 1], c=np.real(u_valeurs), cmap='RdBu_r', s=50, edgecolors='k')
+    plt.colorbar(sc_re, ax=ax1, label="Re(u)")
+    ax1.set_title("Partie réelle : Re(u)")
+    ax1.set_xlabel("x")
+    ax1.set_ylabel("y")
+    ax1.axis('equal')
+    ax1.set_aspect('equal', adjustable='box')
+    ax1.grid(True, linestyle='--', alpha=0.6)
+
+    # Partie imaginaire
+    sc_im = ax2.scatter(X[:, 0], X[:, 1], c=np.imag(u_valeurs), cmap='RdBu_r', s=50, edgecolors='k')
+    plt.colorbar(sc_im, ax=ax2, label="Im(u)")
+    ax2.set_title("Partie imaginaire : Im(u)")
+    ax2.set_xlabel("x")
+    ax2.set_ylabel("y")
+    ax2.axis('equal')
+    ax2.set_aspect('equal', adjustable='box')
+    ax2.grid(True, linestyle='--', alpha=0.6)
+
+    fig.suptitle(titre, fontsize=14)
+    plt.tight_layout()
     plt.show()
 
 def plot_comparaison_1D_cercle(X, u_num, u_ref):
@@ -181,52 +171,6 @@ def plot_comparaison_1D_cercle(X, u_num, u_ref):
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.show()
 
-def plot_diffraction_2D(k, a, N_serie, L_domaine=5, resolution=200):
-    """
-    Calcule et affiche le champ total (incident + diffracté) sur une grille 2D 
-    en utilisant la solution analytique.
-    """
-    # 1. Création de la grille spatiale
-    x = np.linspace(-L_domaine, L_domaine, resolution)
-    y = np.linspace(-L_domaine, L_domaine, resolution)
-    X_grid, Y_grid = np.meshgrid(x, y)
-    
-    # 2. Passage en coordonnées cylindriques
-    R = np.sqrt(X_grid**2 + Y_grid**2)
-    Theta = np.arctan2(Y_grid, X_grid)
-    
-    # 3. Masquage de l'intérieur du cylindre (le champ y est nul ou non pertinent)
-    mask = R >= a
-    
-    # 4. Calcul du champ diffusé à l'extérieur
-    u_diff_champ = np.zeros_like(R, dtype=complex)
-    u_diff_champ[mask] = fonctions.u_diff(R[mask], Theta[mask], k, a, N_serie)
-    
-    # 5. Définition du champ incident 
-    # (D'après ton p(), trace_u_inc contient exp(-1j*k*r*cos(theta)), 
-    # l'onde plane vient de +x et va vers -x, on fait de même ici)
-    u_inc_champ = np.zeros_like(R, dtype=complex)
-    u_inc_champ[mask] = np.exp(-1j * k * X_grid[mask])
-    
-    # 6. Champ Total
-    u_tot = u_diff_champ + u_inc_champ
-    
-    # 7. Visualisation
-    plt.figure(figsize=(9, 7))
-    # On utilise un "pcolormesh" pour afficher la grille de couleurs
-    plt.pcolormesh(X_grid, Y_grid, np.real(u_tot), cmap='RdBu_r', shading='auto', vmin=-2, vmax=2)
-    
-    # On dessine l'obstacle (le cylindre de rayon a) en gris
-    cercle = plt.Circle((0, 0), a, color='dimgray', zorder=10)
-    plt.gca().add_patch(cercle)
-    
-    plt.colorbar(label="Re(u_total)")
-    plt.title(f"Visualisation de la diffraction (Analytique)\nk={k}, a={a}")
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.axis('equal')
-    plt.show()
-
 
 
 
@@ -242,12 +186,12 @@ points, segments, milieux, longueurs, normales = fonctions.maillage_segments(N, 
 valeurs_p = calcul_p(milieux, k, a, N_serie)
 
 # --- 2. Évaluation sur les points d'observation ---
-r_obs = 5
+r_obs = 1.0000001
 N_obs = 60    # On augmente un peu pour faire de belles courbes
 X, _, _, _, _ = fonctions.maillage_segments(N_obs, r_obs, forme="cercle")
 
-nq = 4 # ordre de quadrature
-u_X = u(X, N, valeurs_p, nq)
+nq = 7 # ordre de quadrature
+u_X = u(X, points, segments, N, valeurs_p, nq, k)
 
 # --- 3. Solution Analytique de référence ---
 R_obs, Theta_obs = fonctions.cartesien_to_cylindrique(X[:,0], X[:,1])
@@ -259,13 +203,340 @@ print(f"Erreur relative (Norme infinie) : {erreur_rel:.4e} (soit {erreur_rel*100
 
 # --- 5. Visualisations ---
 # Plot des points isolés dans l'espace
-plot_champ_sur_points(X, u_X, titre="Champ diffusé (BEM) aux points d'observation")
+# plot_champ_sur_points(X, u_X, titre="Champ BEM aux points d'observation")
+# plot_champ_sur_points(X, u_analytique, titre="Champ analytique aux points d'observation")
+# plot_champ_sur_points(X, u_analytique - u_X, titre="Champ analytique aux points d'observation")
 
-# Comparaison des courbes 1D sur le périmètre d'observation
-plot_comparaison_1D_cercle(X, u_X, u_analytique)
+# # Comparaison des courbes 1D sur le périmètre d'observation
+# plot_comparaison_1D_cercle(X, u_X, u_analytique)
 
-# Visualisation 2D de l'onde totale autour de l'objet (peut prendre 1 ou 2 secondes)
-plot_diffraction_2D(k, a, N_serie, L_domaine=5, resolution=200)
+
+def evaluer_cas(N, nq, r_obs, a=1, k=5, N_serie=30, N_obs=60):
+    """
+    Fonction utilitaire qui refait tout le calcul BEM pour un triplet (N, nq, r_obs) donné
+    et renvoie l'erreur relative.
+    """
+    # 1. Maillage obstacle
+    points, segments, milieux, longueurs, normales = fonctions.maillage_segments(N, a, forme="cercle")
+    valeurs_p = calcul_p(milieux, k, a, N_serie)
+    
+    # 2. Maillage observation
+    X, _, _, _, _ = fonctions.maillage_segments(N_obs, r_obs, forme="cercle")
+    R_obs, Theta_obs = fonctions.cartesien_to_cylindrique(X[:,0], X[:,1])
+    
+    # 3. Calculs
+    u_X = u(X, points, segments, N, valeurs_p, nq, k) 
+    
+    u_analytique = fonctions.u_diff(R_obs, Theta_obs, k, a, N_serie)
+    
+    # 4. Erreur
+    return calcul_erreur_relative(u_X, u_analytique)
+
+
+def etude_convergence_N(nq_fixe=6, r_obs_fixe=1.01):
+    print(f"--- Étude de N (nq={nq_fixe}, r_obs={r_obs_fixe}) ---")
+    liste_N = [20, 40, 80, 160, 320]
+    erreurs = []
+    
+    for N in liste_N:
+        err = evaluer_cas(N, nq=nq_fixe, r_obs=r_obs_fixe)
+        erreurs.append(err)
+        print(f"N = {N:3d} -> Erreur = {err:.4e}")
+        
+    plt.figure(figsize=(7, 5))
+    plt.loglog(liste_N, erreurs, marker='o', color='b', linewidth=2)
+    plt.title(f"Convergence en fonction de N (nq={nq_fixe})")
+    plt.xlabel("Nombre de segments N (Log)")
+    plt.ylabel("Erreur relative (Log)")
+    plt.grid(True, which="both", ls="--", alpha=0.5)
+    plt.show()
+
+def etude_convergence_nq(N_fixe=100, r_obs_fixe=2):
+    print(f"--- Étude de nq (N={N_fixe}, r_obs={r_obs_fixe}) ---")
+    liste_nq = [1, 2, 3, 4, 5, 6, 7]
+    erreurs = []
+    
+    for nq in liste_nq:
+        err = evaluer_cas(N=N_fixe, nq=nq, r_obs=r_obs_fixe)
+        erreurs.append(err)
+        print(f"nq = {nq:2d} -> Erreur = {err:.4e}")
+        
+    plt.figure(figsize=(7, 5))
+    plt.semilogy(liste_nq, erreurs, marker='s', color='r', linewidth=2)
+    plt.title(f"Convergence en fonction de nq (N={N_fixe}, r_obs = {r_obs_fixe})")
+    plt.xlabel("Ordre de quadrature nq")
+    plt.ylabel("Erreur relative (Log)")
+    plt.grid(True, which="both", ls="--", alpha=0.5)
+    plt.show()
+
+def etude_influence_robs(N_fixe=100, nq_fixe=4, a=1):
+    print(f"--- Étude de la distance r_obs (N={N_fixe}, nq={nq_fixe}) ---")
+    liste_robs = [1.01, 1.02, 1.05, 1.1, 1.25, 1.5, 2.0, 3.0, 5.0, 8.0]
+    erreurs = []
+    
+    for r in liste_robs:
+        err = evaluer_cas(N=N_fixe, nq=nq_fixe, r_obs=r)
+        erreurs.append(err)
+        print(f"r_obs = {r:.2f} -> Erreur = {err:.4e}")
+        
+    plt.figure(figsize=(7, 5))
+    plt.semilogy(liste_robs, erreurs, marker='^', color='g', linewidth=2)
+    plt.title(f"Influence de la proximité au bord (N={N_fixe}, nq={nq_fixe})")
+    plt.xlabel(f"Rayon d'observation r_obs (Obstacle à r={a})")
+    plt.ylabel("Erreur relative (Log)")
+    
+    # On ajoute une ligne verticale pour montrer où se trouve l'obstacle
+    plt.axvline(x=a, color='k', linestyle='--', label="Bord de l'obstacle")
+    plt.legend()
+    
+    plt.grid(True, which="both", ls="--", alpha=0.5)
+    plt.show()
+
+# --- LANCEMENT DES ÉTUDES ---
+
+# etude_convergence_N()
+# etude_convergence_nq()
+# etude_influence_robs()
+
+
+
+
+
+##### Visualisation Bonus sur domaine global
+def compare_diffraction_2D(k, a, N_serie, N, p_vals, nq, L_domaine=5, resolution=60):
+    """
+    Calcule, affiche et renvoie les champs totaux (analytique et BEM) 
+    ainsi que leur différence absolue, pour les parties réelles et imaginaires.
+    Affiche les résultats sur 3 figures séparées.
+    """
+    print(f"Génération de la grille commune ({resolution}x{resolution})...")
+    
+    # 1. Création de la grille spatiale commune
+    x = np.linspace(-L_domaine, L_domaine, resolution)
+    y = np.linspace(-L_domaine, L_domaine, resolution)
+    X_grid, Y_grid = np.meshgrid(x, y)
+    
+    R = np.sqrt(X_grid**2 + Y_grid**2)
+    Theta = np.arctan2(Y_grid, X_grid)
+    
+    # 2. Masque commun (On exclut l'intérieur de l'objet avec une marge pour BEM)
+    mask = R > (a + 1e-3)
+    
+    # Coordonnées des points d'évaluation
+    X_eval = np.column_stack((X_grid[mask], Y_grid[mask]))
+    
+    # 3. Définition du champ incident commun
+    u_inc_X = np.exp(-1j * k * X_eval[:, 0])
+
+    # 4. Calcul de la solution Analytique
+    print("Calcul de la solution Analytique en cours...")
+    # Assure-toi que "fonctions" est bien importé dans ton script
+    u_diff_ana_X = fonctions.u_diff(R[mask], Theta[mask], k, a, N_serie)
+    u_tot_ana_X = u_diff_ana_X + u_inc_X
+
+    # 5. Calcul de la solution BEM
+    points, segments, milieux, longueurs, normales = fonctions.maillage_segments(N, a, forme="cercle")
+    print(f"Calcul de la solution BEM sur {len(X_eval)} points en cours...")
+    u_diff_bem_X = u(X_eval, points, segments, N, p_vals, nq, k)
+    u_tot_bem_X = u_diff_bem_X + u_inc_X
+
+    # 6. Calcul des différences absolues (Réelle et Imaginaire)
+    diff_Re_X = np.abs(np.real(u_tot_ana_X) - np.real(u_tot_bem_X))
+    diff_Im_X = np.abs(np.imag(u_tot_ana_X) - np.imag(u_tot_bem_X))
+
+    # 7. Reconstitution des matrices 2D (NaN à l'intérieur du cylindre)
+    def reconstruct_2D(valeurs_1D):
+        champ = np.full(R.shape, np.nan, dtype=float)
+        champ[mask] = valeurs_1D
+        return champ
+
+    Re_ana = reconstruct_2D(np.real(u_tot_ana_X))
+    Im_ana = reconstruct_2D(np.imag(u_tot_ana_X))
+    
+    Re_bem = reconstruct_2D(np.real(u_tot_bem_X))
+    Im_bem = reconstruct_2D(np.imag(u_tot_bem_X))
+    
+    Re_diff = reconstruct_2D(diff_Re_X)
+    Im_diff = reconstruct_2D(diff_Im_X)
+
+    # 8. Affichage (3 figures distinctes de 2 colonnes)
+    def plot_panel(fig_obj, ax, Z, title, cmap, vmin=None, vmax=None):
+        im = ax.pcolormesh(X_grid, Y_grid, Z, cmap=cmap, shading='auto', vmin=vmin, vmax=vmax)
+        cercle = plt.Circle((0, 0), a, color='dimgray', zorder=10)
+        ax.add_patch(cercle)
+        ax.set_aspect('equal')
+        ax.set_title(title)
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        fig_obj.colorbar(im, ax=ax)
+
+    # Figure 1 : Analytique
+    fig1, axes1 = plt.subplots(1, 2, figsize=(14, 6))
+    plot_panel(fig1, axes1[0], Re_ana, "Analytique - Partie Réelle", 'RdBu_r', -2, 2)
+    plot_panel(fig1, axes1[1], Im_ana, "Analytique - Partie Imaginaire", 'RdBu_r', -2, 2)
+    fig1.tight_layout()
+    
+    # Figure 2 : BEM
+    fig2, axes2 = plt.subplots(1, 2, figsize=(14, 6))
+    plot_panel(fig2, axes2[0], Re_bem, "BEM - Partie Réelle", 'RdBu_r', -2, 2)
+    plot_panel(fig2, axes2[1], Im_bem, "BEM - Partie Imaginaire", 'RdBu_r', -2, 2)
+    fig2.tight_layout()
+    
+    # Figure 3 : Différence absolue
+    fig3, axes3 = plt.subplots(1, 2, figsize=(14, 6))
+    plot_panel(fig3, axes3[0], Re_diff, "Différence Absolue - Partie Réelle", 'viridis')
+    plot_panel(fig3, axes3[1], Im_diff, "Différence Absolue - Partie Imaginaire", 'viridis')
+    fig3.tight_layout()
+
+    plt.show()
+    print("Calcul et affichage terminés !")
+
+    # 9. Retour des résultats pour une utilisation ultérieure
+    return {
+        "Analytique": (Re_ana, Im_ana),
+        "BEM": (Re_bem, Im_bem),
+        "Difference": (Re_diff, Im_diff),
+        "X_grid": X_grid,
+        "Y_grid": Y_grid
+    }
+# --- Exemple d'appel ---
+# resultats = compare_diffraction_2D(k, a, N_serie, N, valeurs_p, nq, L_domaine=5, resolution=80)
+
+
+
+#####Question 5
+
+def quad_XiGreen(G, x, a, b, nq):
+    sum = 0
+    xi, w = np.polynomial.legendre.leggauss(nq)
+
+    for i in range(nq):
+        sum += w[i] * xi[i]*G(x, 0.5 * (a+b) + 0.5 * xi[i] * (b-a))
+
+    sum *= 0.5 * np.linalg.norm(a-b)
+
+    return sum
+
+def A_p_lineaire(X, points, segments, N, nq, k): #quad est une quadrature (tableau de taille n_q) contenant les tableaux poid,point
+    n_obs = np.shape(X)[0]
+    A = np.zeros((n_obs,N), dtype=complex)
+    print("A",np.shape(A))
+    print("n_obs",n_obs)
+    for i in range(n_obs):
+        for j in range(N):
+            if (j==0): 
+                A[i][j] = quad_Green(G,X[i,:],points[segments[j][0]],points[segments[j][1]],nq) - quad_XiGreen(G,X[i,:],points[segments[j][0]],points[segments[j][1]],nq)
+                A[i][j] += quad_Green(G,X[i,:],points[segments[N-1][0]],points[segments[N-1][1]],nq) + quad_XiGreen(G,X[i,:],points[segments[N-1][0]],points[segments[N-1][1]],nq)
+                A[i][j] *=0.5
+            else:
+                A[i][j] = quad_Green(G,X[i,:],points[segments[j][0]],points[segments[j][1]],nq) - quad_XiGreen(G,X[i,:],points[segments[j][0]],points[segments[j][1]],nq)
+                A[i][j] += quad_Green(G,X[i,:],points[segments[j-1][0]],points[segments[j-1][1]],nq) + quad_XiGreen(G,X[i,:],points[segments[j-1][0]],points[segments[j-1][1]],nq)
+                A[i][j] *=0.5
+    return A
+
+def u_p_lineaire(X, points, segments, N, p, nq, k):
+    return A_p_lineaire(X, points, segments, N, nq, k) @ p
+
+# --- TEST ET VISUALISATION ---
+a = 1
+N = 100       # Nombres de segments sur l'obstacle
+N_serie = 30  # Ordre de troncature de la série de Bessel/Hankel
+k = 5
+
+# --- 1. Résolution BEM ---
+points, segments, milieux, longueurs, normales = fonctions.maillage_segments(N, a, forme="cercle")
+valeurs_p_sommets = calcul_p(points, k, a, N_serie)
+
+# --- 2. Évaluation sur les points d'observation ---
+r_obs = 1.0000001
+N_obs = 60    # On augmente un peu pour faire de belles courbes
+X, _, _, _, _ = fonctions.maillage_segments(N_obs, r_obs, forme="cercle")
+
+nq = 7 # ordre de quadrature
+u_X = u_p_lineaire(X, points, segments, N, valeurs_p_sommets, nq, k)
+
+# --- 3. Solution Analytique de référence ---
+R_obs, Theta_obs = fonctions.cartesien_to_cylindrique(X[:,0], X[:,1])
+u_analytique = fonctions.u_diff(R_obs, Theta_obs, k, a, N_serie)
+
+# --- 4. Calcul de l'erreur ---
+erreur_rel = calcul_erreur_relative(u_X, u_analytique)
+print(f"Erreur relative (Norme infinie) : {erreur_rel:.4e} (soit {erreur_rel*100:.2f}%)")
+
+# --- 5. Visualisations ---
+# Plot des points isolés dans l'espace
+# plot_champ_sur_points(X, u_X, titre="Champ BEM aux points d'observation p linéaire")
+# plot_champ_sur_points(X, u_analytique, titre="Champ analytique aux points d'observation p linéaire")
+# plot_champ_sur_points(X, u_analytique - u_X, titre="Champ analytique aux points d'observation p linéaire")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+########################
+# def plot_diffraction_2D(k, a, N_serie, L_domaine=5, resolution=200):
+#     """
+#     Calcule et affiche le champ total (incident + diffracté) sur une grille 2D 
+#     en utilisant la solution analytique.
+#     """
+#     # 1. Création de la grille spatiale
+#     x = np.linspace(-L_domaine, L_domaine, resolution)
+#     y = np.linspace(-L_domaine, L_domaine, resolution)
+#     X_grid, Y_grid = np.meshgrid(x, y)
+    
+#     # 2. Passage en coordonnées cylindriques
+#     R = np.sqrt(X_grid**2 + Y_grid**2)
+#     Theta = np.arctan2(Y_grid, X_grid)
+    
+#     # 3. Masquage de l'intérieur du cylindre (le champ y est nul ou non pertinent)
+#     mask = R >= a
+    
+#     # 4. Calcul du champ diffusé à l'extérieur
+#     u_diff_champ = np.zeros_like(R, dtype=complex)
+#     u_diff_champ[mask] = fonctions.u_diff(R[mask], Theta[mask], k, a, N_serie)
+    
+#     # 5. Définition du champ incident 
+#     # (D'après ton p(), trace_u_inc contient exp(-1j*k*r*cos(theta)), 
+#     # l'onde plane vient de +x et va vers -x, on fait de même ici)
+#     u_inc_champ = np.zeros_like(R, dtype=complex)
+#     u_inc_champ[mask] = np.exp(-1j * k * X_grid[mask])
+    
+#     # 6. Champ Total
+#     u_tot = u_diff_champ + u_inc_champ
+    
+#     # 7. Visualisation
+#     plt.figure(figsize=(9, 7))
+#     # On utilise un "pcolormesh" pour afficher la grille de couleurs
+#     plt.pcolormesh(X_grid, Y_grid, np.real(u_tot), cmap='RdBu_r', shading='auto', vmin=-2, vmax=2)
+    
+#     # On dessine l'obstacle (le cylindre de rayon a) en gris
+#     cercle = plt.Circle((0, 0), a, color='dimgray', zorder=10)
+#     plt.gca().add_patch(cercle)
+    
+#     plt.colorbar(label="Re(u_total)")
+#     plt.title(f"Visualisation de la diffraction (Analytique)\nk={k}, a={a}")
+#     plt.xlabel("x")
+#     plt.ylabel("y")
+#     plt.axis('equal')
+#     plt.show()
+
+
+
+
+# # Visualisation 2D de l'onde totale autour de l'objet (peut prendre 1 ou 2 secondes)
+# plot_diffraction_2D(k, a, N_serie, L_domaine=5, resolution=200)
 
 def plot_diffraction_2D_BEM(points, segments, N, p_vals, nq, k, a, L_domaine=5, resolution=80):
     """
@@ -279,9 +550,13 @@ def plot_diffraction_2D_BEM(points, segments, N, p_vals, nq, k, a, L_domaine=5, 
     y = np.linspace(-L_domaine, L_domaine, resolution)
     X_grid, Y_grid = np.meshgrid(x, y)
     
-    # 2. Rayon et Masque
-    R = np.sqrt(X_grid**2 + Y_grid**2)
-    # On calcule uniquement à l'extérieur stricte (marge de sécurité de 1e-3)
+    # # 2. Rayon et Masque Si CERCLE
+    # R = np.sqrt(X_grid**2 + Y_grid**2)
+    # # On calcule uniquement à l'extérieur stricte (marge de sécurité de 1e-3)
+    # mask = R > (a + 1e-3)
+
+    # 2. Rayon (norme infinie pour un carré) et Masque SI CARRE
+    R= np.maximum(np.abs(X_grid), np.abs(Y_grid)) 
     mask = R > (a + 1e-3)
     
     # 3. Extraction des coordonnées des points extérieurs sous forme de liste (N_ext, 2)
@@ -290,7 +565,7 @@ def plot_diffraction_2D_BEM(points, segments, N, p_vals, nq, k, a, L_domaine=5, 
     print(f"Calcul BEM sur {len(X_eval)} points extérieurs en cours (cela peut prendre un moment)...")
     
     # 4. Calcul du champ diffusé par la BEM sur ces points
-    u_diff_X = u(X_eval, N, p_vals, nq)
+    u_diff_X = u(X_eval,points,segments, N, p_vals, nq,k)
     
     # 5. Ajout du champ incident (même définition que dans la fonction analytique)
     u_inc_X = np.exp(-1j * k * X_eval[:, 0])
@@ -306,10 +581,13 @@ def plot_diffraction_2D_BEM(points, segments, N, p_vals, nq, k, a, L_domaine=5, 
     plt.figure(figsize=(9, 7))
     plt.pcolormesh(X_grid, Y_grid, np.real(u_tot_champ), cmap='RdBu_r', shading='auto', vmin=-2, vmax=2)
     
-    # On dessine l'obstacle
-    cercle = plt.Circle((0, 0), a, color='dimgray', zorder=10)
-    plt.gca().add_patch(cercle)
-    
+    # # On dessine l'obstacle
+    # cercle = plt.Circle((0, 0), a, color='dimgray', zorder=10)
+    # plt.gca().add_patch(cercle)
+    # On dessine l'obstacle (carré de côté 2a centré en 0,0)
+    carre = plt.Rectangle((-a, -a), 2*a, 2*a, color='dimgray', zorder=10)
+    plt.gca().add_patch(carre)
+
     plt.colorbar(label="Re(u_total) - BEM")
     plt.title(f"Visualisation de la diffraction (BEM)\nk={k}, a={a}, Points BEM: {N}")
     plt.xlabel("x")
@@ -318,5 +596,19 @@ def plot_diffraction_2D_BEM(points, segments, N, p_vals, nq, k, a, L_domaine=5, 
     plt.show()
     print("Affichage terminé !")
 
-# Tracer le champ BEM sur la grille 2D
-plot_diffraction_2D_BEM(points, segments, N, valeurs_p, nq, k, a, L_domaine=5, resolution=80)
+# # Tracer le champ BEM sur la grille 2D
+# plot_diffraction_2D_BEM(points, segments, N, valeurs_p, nq, k, a, L_domaine=5, resolution=60)
+
+####BONUS TEST CARRE
+a = 1
+N = 100       # Nombres de segments sur l'obstacle
+N_serie = 30  # Ordre de troncature de la série de Bessel/Hankel
+k = 5
+
+# --- 1. Résolution BEM ---
+points, segments, milieux, longueurs, normales = fonctions.maillage_segments(N, a, forme="carre")
+valeurs_p = calcul_p(milieux, k, a, N_serie)
+
+# --- 2. Évaluation sur les points d'observation ---
+nq = 4 # ordre de quadrature
+plot_diffraction_2D_BEM(points, segments, N, valeurs_p, nq, k, a, L_domaine=5, resolution=90)
