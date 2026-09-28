@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.special import jv, hankel1
 
 gamma_euler = 0.5772156649
+k = 1
 
 def uinc(x, k):
     return np.exp(-1j * k * x[0])
@@ -19,29 +20,19 @@ def quad_gauss_legendre(f, a, b, nq):
 
     return sum
 
-def quad_Green(G, x, a, b, nq):
+def quad_Green(G, x, a, b, nq, k):
     sum = 0
     xi, w = np.polynomial.legendre.leggauss(nq)
 
     for i in range(nq):
-        sum += w[i] * G(x, 0.5 * (a+b) + 0.5 * xi[i] * (b-a))
+        sum += w[i] * G(x, 0.5 * (a+b) + 0.5 * xi[i] * (b-a), k)
 
     sum *= 0.5 * np.linalg.norm(a-b)
 
     return sum
 
-def G(x,y):
+def G(x,y,k):
     return 1j*hankel1(0, k*np.linalg.norm(x-y))/4
-
-def A_old(X, points, segments, N, nq, k): #quad est une quadrature (tableau de taille n_q) contenant les tableaux poid,point
-    n_obs = np.shape(X)[0]
-    A = np.zeros((n_obs,N), dtype=complex)
-    print("A",np.shape(A))
-    print("n_obs",n_obs)
-    for i in range(n_obs):
-        for j in range(N):
-            A[i][j] = quad_Green(G,X[i,:],points[segments[j][0]],points[segments[j][1]],nq)
-    return A
 
 # Question 3
 
@@ -76,9 +67,9 @@ def A_assemble_pas_traitement(X, points, segments, nq, N, k):
             Aij = 0
             aj, bj = points[segments[j][0]], points[segments[j][1]]
 
-            for k in range(nq):
-                for k_tilde in range(nq):
-                    Aij += w[k] * w[k_tilde] * G(0.5 * (ai+bi) + 0.5 * x_quad[k] * (bi-ai) , 0.5 * (aj+bj) + 0.5 * x_quad[k_tilde] * (bj-aj))
+            for k_index in range(nq):
+                for k_tilde_index in range(nq):
+                    Aij += w[k_index] * w[k_tilde_index] * G(0.5 * (ai+bi) + 0.5 * x_quad[k_index] * (bi-ai) , 0.5 * (aj+bj) + 0.5 * x_quad[k_tilde_index] * (bj-aj), k)
 
             Aij *= 0.5 * np.linalg.norm(bi-ai)
             Aij *= 0.5 * np.linalg.norm(bj-aj)
@@ -90,7 +81,7 @@ def A_assemble_pas_traitement(X, points, segments, nq, N, k):
 
 # Question 5 assemblage de A avec traitement de la singularité 
 
-def A_assemble_pas_traitement(X, points, segments, nq, N, k):
+def A_assemble(X, points, segments, nq, N, k):
     A = np.zeros((N,N), dtype=complex)
     print("A",np.shape(A))
     print("N", N)
@@ -106,14 +97,35 @@ def A_assemble_pas_traitement(X, points, segments, nq, N, k):
             Aij = 0
 
             if i==j: #cas de la singularité gamme_e = gamme_é
-                print()
-            else :
+                
+                # On calcule séparemment la partie singulière et la partie régulière
+                reg = 0
+                sing = 0
 
+                for k_index in range(nq):
+                    for k_tilde_index in range(nq):
+                        reg += w[k_index] * w[k_tilde_index] * (1j/4 - (1/(2*np.pi) * (np.log(k/2) + gamma_euler)))
+                reg *= (0.5 * np.linalg.norm(bi-ai))**2
+
+                # On intégre ensuite la singularité analytiquement l'intégrale au sens de y puis on intégre au sens de x grâce à une quad
+                for k_index in range(nq):
+                    d_b_x = bi - (0.5 * (ai+bi) + 0.5 * x_quad[k_index] * (bi-ai))
+                    d_a_x = ai - (0.5 * (ai+bi) + 0.5 * x_quad[k_index] * (bi-ai))
+                    Tau_e = (bi - ai)/np.linalg.norm(bi-ai)
+
+                    sing += w[k_index] * (np.dot(d_b_x, Tau_e) * np.log(np.linalg.norm(d_b_x)) - np.dot(d_a_x, Tau_e) * np.log(np.linalg.norm(d_a_x)) - np.linalg.norm(bi-ai))
+
+                sing *= -(1/(2*np.pi))
+                sing *= (0.5 * np.linalg.norm(bi-ai))
+
+                Aij = sing + reg
+
+            else :
                 aj, bj = points[segments[j][0]], points[segments[j][1]]
 
-                for k in range(nq):
-                    for k_tilde in range(nq):
-                        Aij += w[k] * w[k_tilde] * G(0.5 * (ai+bi) + 0.5 * x_quad[k] * (bi-ai) , 0.5 * (aj+bj) + 0.5 * x_quad[k_tilde] * (bj-aj))
+                for k_index in range(nq):
+                    for k_tilde_index in range(nq):
+                        Aij += w[k_index] * w[k_tilde_index] * G(0.5 * (ai+bi) + 0.5 * x_quad[k_index] * (bi-ai) , 0.5 * (aj+bj) + 0.5 * x_quad[k_tilde_index] * (bj-aj), k)
 
                 Aij *= 0.5 * np.linalg.norm(bi-ai)
                 Aij *= 0.5 * np.linalg.norm(bj-aj)
