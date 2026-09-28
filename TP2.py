@@ -41,6 +41,8 @@ def A_old(X, points, segments, N, nq, k): #quad est une quadrature (tableau de t
             A[i][j] = quad_Green(G,X[i,:],points[segments[j][0]],points[segments[j][1]],nq)
     return A
 
+# Question 3
+
 def B(X, points, segments, nq, k):
     n_obs = np.shape(X)[0]
     b = np.zeros(n_obs, dtype=complex)
@@ -54,6 +56,8 @@ def B(X, points, segments, nq, k):
             nq
         )
     return b
+
+#Question 4
 
 def A_assemble(X, points, segments, nq, N, k):
     n_obs = np.shape(X)[0]
