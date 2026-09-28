@@ -1,10 +1,16 @@
-#import fonctions 
+import fonctions
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import jv, hankel1
 
+# Constantes du problème
 gamma_euler = 0.5772156649
 k = 1
+nq = 10
+a = 1
+N = 100
+
+# Fonctions du maillage
 
 def uinc(x, k):
     return np.exp(-1j * k * x[0])
@@ -36,7 +42,7 @@ def G(x,y,k):
 
 # Question 3
 
-def B(X, points, segments, N, nq, k):
+def B(points, segments, N, nq, k):
     b = np.zeros(N, dtype=complex)
     print("b", np.shape(b))
     print("N", N)
@@ -51,7 +57,7 @@ def B(X, points, segments, N, nq, k):
 
 #Question 4 sans traitement de la singularité
 
-def A_assemble_pas_traitement(X, points, segments, nq, N, k):
+def A_assemble_pas_traitement(points, segments, nq, N, k):
     A = np.zeros((N,N), dtype=complex)
     print("A",np.shape(A))
     print("N", N)
@@ -81,7 +87,7 @@ def A_assemble_pas_traitement(X, points, segments, nq, N, k):
 
 # Question 5 assemblage de A avec traitement de la singularité 
 
-def A_assemble(X, points, segments, nq, N, k):
+def A_assemble(points, segments, nq, N, k):
     A = np.zeros((N,N), dtype=complex)
     print("A",np.shape(A))
     print("N", N)
@@ -135,4 +141,23 @@ def A_assemble(X, points, segments, nq, N, k):
 
     return A
 
+# Tests de la question 5
+
+points,segments,milieux,longueurs,normales = fonctions.maillage_segments(N, a, "cercle")
+#fonctions.affichage_maillage(points,segments,milieux,longueurs,normales)
+
+# comparer intégrale constante vs Legendre
+
+# Comparaison traitements et pas traitements de la singularité
+A_traitement = A_assemble(points=points, segments=segments, nq=nq, N=N, k=k)
+A_pas_traitement = A_assemble_pas_traitement(points=points, segments=segments, nq=nq, N=N, k=k)
+
+diag_traitement = np.diag(A_traitement)
+diag_pas_traitement = np.diag(A_pas_traitement)
+
+print("Diagonale avec traitement :")
+print(diag_traitement)
+
+print("\nDiagonale sans traitement :")
+print(diag_pas_traitement)
 
