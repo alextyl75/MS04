@@ -65,6 +65,7 @@ plt.xticks(deg_test_tab)
 plt.grid(True, which="both")
 plt.legend()
 
+
 # plt.show()
 
 
@@ -612,3 +613,4 @@ valeurs_p = calcul_p(milieux, k, a, N_serie)
 # --- 2. Évaluation sur les points d'observation ---
 nq = 4 # ordre de quadrature
 plot_diffraction_2D_BEM(points, segments, N, valeurs_p, nq, k, a, L_domaine=5, resolution=90)
+#plt.show()
