@@ -14,6 +14,9 @@ a = 1
 N = 100
 
 test_q5 = False
+test_erreur_relative = False
+test_q6_N = True
+test_q6_nq = False
 
 # Fonctions du maillage
 
@@ -148,15 +151,13 @@ def A_assemble(points, segments, nq, nq_tilde, N, k):
 
     return A
 
-# Tests de la question 5
-
-points,segments,milieux,longueurs,normales = fonctions.maillage_segments(N, a, "cercle")
-#fonctions.affichage_maillage(points,segments,milieux,longueurs,normales)
-
 # comparer intégrale constante vs Legendre
 
 # Comparaison traitements et pas traitements de la singularité
 if test_q5:
+    points,segments,milieux,longueurs,normales = fonctions.maillage_segments(N, a, "cercle")
+    #fonctions.affichage_maillage(points,segments,milieux,longueurs,normales)
+
     nq_tab = [i for i in range(1,10)]
     nq_tilde_tab = [i+1 for i in nq_tab] 
     error_tab = []
@@ -180,28 +181,147 @@ if test_q5:
 
 # Question 6
 
-# On génère A et b
-A = A_assemble(points=points, segments=segments, nq=nq, nq_tilde=nq_tilde, N=N, k=k)
-b = B(points=points, segments=segments, N=N, nq=nq, k=k)
+if test_erreur_relative:
 
-p_num, info = gmres(A, b, rtol=1e-10)
-p_analytique = fonctions.calcul_p(milieux, k, a, N_serie=20)
+    # On génère A et b
 
-for i in range(N):
-    print(
-        f"i={i:3d} | "
-        f"p_num = {p_num[i]:.6e} | "
-        f"p_exact = {p_analytique[i]:.6e} | "
-        f"erreur = {abs(p_num[i] - p_analytique[i]):.6e}"
+    A = A_assemble(points=points, segments=segments, nq=nq, nq_tilde=nq_tilde, N=N, k=k)
+    b = B(points=points, segments=segments, N=N, nq=nq, k=k)
+
+    p_num, info = gmres(A, b, rtol=1e-10)
+    p_analytique = fonctions.calcul_p(milieux, k, a, N_serie=20)
+
+    for i in range(N):
+        print(
+            f"i={i:3d} | "
+            f"p_num = {p_num[i]:.6e} | "
+            f"p_exact = {p_analytique[i]:.6e} | "
+            f"erreur = {abs(p_num[i] - p_analytique[i]):.6e}"
+        )
+
+    erreur_relative = (np.linalg.norm(p_num - p_analytique)/ np.linalg.norm(p_analytique))
+
+    print("Erreur relative :", erreur_relative)
+
+    # donnés par chatgpt
+    print("info =", info) #info = 0 cv atteinte, info > 0 nb itérations
+    print("résidu relatif =", np.linalg.norm(b - A @ p_num) / np.linalg.norm(b)) #residu final
+
+if test_q6_N:
+    Nb_test = 10
+    a, k = 1, 1
+    nq = 5
+    nq_tilde = nq
+
+    N_tab = [100*i for i in range(1,Nb_test+1)]
+    error_tab = []
+
+    for Npoints in N_tab:
+        points,segments,milieux,longueurs,normales = fonctions.maillage_segments(Npoints, a, "cercle")
+
+        A = A_assemble(points=points, segments=segments, nq=nq, nq_tilde=nq_tilde, N=Npoints, k=k)
+        b = B(points=points, segments=segments, N=Npoints, nq=nq, k=k)
+
+        p_num, info = gmres(A, b, rtol=1e-10)
+        p_analytique = fonctions.calcul_p(milieux, k, a, N_serie=20)
+
+        erreur_relative = (np.linalg.norm(p_num - p_analytique)/ np.linalg.norm(p_analytique))
+        error_tab.append(erreur_relative)
+        print(N, " ", erreur_relative)
+    # graphe test
+
+    plt.figure(figsize=(7, 5))
+
+    plt.loglog(
+        N_tab,
+        error_tab,
+        "o-",
+        label="Erreur relative"
     )
 
-erreur_relative = (
-    np.linalg.norm(p_num - p_analytique)
-    / np.linalg.norm(p_analytique)
-)
+    plt.xlabel(r"$N_{\mathrm{points}}$")
+    plt.ylabel(r"Erreur relative")
 
-print("Erreur relative :", erreur_relative)
+    plt.title("Convergence de la solution numérique\n(Influence de $N$)")
 
-# donnés par chatgpt
-print("info =", info) #info = 0 cv atteinte, info > 0 nb itérations
-print("résidu relatif =", np.linalg.norm(b - A @ p_num) / np.linalg.norm(b)) #residu final
+    # Paramètres du test
+    plt.text(
+        0.97, 0.97,
+        rf"$a = {a}$" + "\n" +
+        rf"$k = {k}$" + "\n" +
+        rf"$n_q = {nq}$",
+        transform=plt.gca().transAxes,
+        ha="right",
+        va="top",
+        bbox=dict(
+            boxstyle="round",
+            facecolor="white",
+            alpha=0.8
+        )
+    )
+
+    plt.grid(True, which="both", linestyle="--", alpha=0.5)
+
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+if test_q6_nq:
+    Nb_test = 1
+    a, k = 1, 1
+    Npoints = 500
+
+    nq_tab = [2*i for i in range(1,Nb_test+1)]
+    error_tab = []
+
+    for nq in nq_tab:
+        nq_tilde = nq
+
+        points,segments,milieux,longueurs,normales = fonctions.maillage_segments(Npoints, a, "cercle")
+
+        A = A_assemble(points=points, segments=segments, nq=nq, nq_tilde=nq_tilde, N=Npoints, k=k)
+        b = B(points=points, segments=segments, N=Npoints, nq=nq, k=k)
+
+        p_num, info = gmres(A, b, rtol=1e-10)
+        p_analytique = fonctions.calcul_p(milieux, k, a, N_serie=20)
+
+        erreur_relative = (np.linalg.norm(p_num - p_analytique)/ np.linalg.norm(p_analytique))
+        error_tab.append(erreur_relative)
+        print(N, " ", erreur_relative)
+
+    plt.figure(figsize=(7, 5))
+    plt.loglog(
+        nq_tab,
+        error_tab,
+        "o-"
+    )
+
+    plt.xlabel(r"$n_q$")
+    plt.ylabel(r"Erreur relative")
+    plt.title(r"Erreur relative en fonction de $n_q$")
+
+    plt.grid(True, which="both", linestyle="--", alpha=0.5)
+
+    plt.tight_layout()
+    plt.show()
+
+        
+
+def p_num(maillage, nq, nq_tilde, Npoints, k):
+    points,segments,milieux,longueurs,normales = maillage
+
+    A = A_assemble(points=points, segments=segments, nq=nq, nq_tilde=nq_tilde, N=Npoints, k=k)
+    b = B(points=points, segments=segments, N=Npoints, nq=nq, k=k)
+
+    p_num, info = gmres(A, b, rtol=1e-10)
+
+    if info > 0:
+        print("Convergence non-atteinte, nb itérations : ", info)
+
+    return(p_num)
+
+print(p_num(fonctions.maillage_segments(N, a, "cercle"), nq, nq, N, k))
+
+
+
