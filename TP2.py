@@ -1,9 +1,10 @@
-from distutils.log import error
+# from distutils.log import error
 import fonctions
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import jv, hankel1
 from scipy.sparse.linalg import gmres
+from matplotlib.patches import Polygon
 
 # Constantes du problème
 gamma_euler = 0.5772156649
@@ -15,8 +16,10 @@ N = 100
 
 test_q5 = False
 test_erreur_relative = False
-test_q6_N = True
+test_q6_N = False
 test_q6_nq = False
+test_q8 = False
+test_geom = True
 
 # Fonctions du maillage
 
@@ -321,7 +324,180 @@ def p_num(maillage, nq, nq_tilde, Npoints, k):
 
     return(p_num)
 
-print(p_num(fonctions.maillage_segments(N, a, "cercle"), nq, nq, N, k))
+# print(p_num(fonctions.maillage_segments(N, a, "cercle"), nq, nq, N, k))
+
+def evaluation_bem_sur_observation_cercle(N, nq, r_obs, a=1, k=5, N_serie=30, N_obs=60):
+    """
+    Fonction utilitaire qui refait tout le calcul BEM pour un triplet (N, nq, r_obs) donné
+    et renvoie l'erreur relative.
+    """
+    # 1. Maillage obstacle
+    maillage = fonctions.maillage_segments(N, a, forme="carre")
+    points, segments, milieux, longueurs, normales = maillage
+    valeurs_p = p_num(maillage, nq, nq, N, k)
+    
+    # 2. Maillage observation
+    X, _, _, _, _ = fonctions.maillage_segments(N_obs, r_obs, forme="cercle")
+    R_obs, Theta_obs = fonctions.cartesien_to_cylindrique(X[:,0], X[:,1])
+    
+    # 3. Calculs
+    u_X = fonctions.u(X, points, segments, N, valeurs_p, nq,G, k) 
+    
+    u_analytique = fonctions.u_diff(R_obs, Theta_obs, k, a, N_serie)
+    
+    # 4. Erreur
+    return fonctions.calcul_erreur_relative(u_X, u_analytique)
 
 
+if(test_q8 ==True):
+
+    N=100
+    nq = 10
+    r_obs = 2
+    print(evaluation_bem_sur_observation_cercle(N, nq, r_obs, a=1, k=5, N_serie=30, N_obs=60))
+
+
+
+
+
+def plot_diffraction_2D_BEM(points, segments, N, p_vals, nq, k, a, L_domaine=5, resolution=80):
+    """
+    Calcule et affiche le champ total (incident + BEM) sur une grille 2D. avec valeurs de p en arguments
+    Attention: Le temps de calcul peut être long car il n'est pas vectorisé.
+    """
+    print(f"Génération de la grille ({resolution}x{resolution})...")
+    
+    # 1. Création de la grille spatiale
+    x = np.linspace(-L_domaine, L_domaine, resolution)
+    y = np.linspace(-L_domaine, L_domaine, resolution)
+    X_grid, Y_grid = np.meshgrid(x, y)
+    
+    # # 2. Rayon et Masque Si CERCLE
+    # R = np.sqrt(X_grid**2 + Y_grid**2)
+    # # On calcule uniquement à l'extérieur stricte (marge de sécurité de 1e-3)
+    # mask = R > (a + 1e-3)
+
+    # 2. Rayon (norme infinie pour un carré) et Masque SI CARRE
+    # R= np.maximum(np.abs(X_grid), np.abs(Y_grid)) 
+    # mask = R > (a + 1e-3)
+
+    # # 2.Masque si ETOILE
+    
+    # # Passage en coordonnées polaires pour chaque point de la grille
+    # R_grid = np.sqrt(X_grid**2 + Y_grid**2)
+    # Theta_grid = np.arctan2(Y_grid, X_grid)
+    
+    # # Calcul du rayon de la frontière de l'étoile pour ces angles
+    # R = a * (1 + 0.4 * np.sin(5 * Theta_grid))
+    
+    # # Le masque est valide pour les points strictement à l'extérieur de l'étoile
+    # mask = R_grid > (R + 1e-3)
+
+    ####masque etoile polygone
+    # Paramètres de l'étoile
+    n = 5            # Nombre de branches de l'étoile
+    R_max = 1.4 * a  # Rayon des pointes (équivalent à 1 + 0.4)
+    R_min = 0.6 * a  # Rayon des creux (équivalent à 1 - 0.4)
+    
+    R_grid = np.sqrt(X_grid**2 + Y_grid**2)
+    Theta_grid = np.arctan2(Y_grid, X_grid)-(np.pi/2)
+    
+    # 1. On "replie" l'angle pour toujours se situer sur un demi-secteur angulaire [0, pi/n]
+    pi_sur_n = np.pi / n
+    phi = pi_sur_n - np.abs((Theta_grid % (2 * pi_sur_n)) - pi_sur_n)
+    
+    # 2. Application de l'équation polaire de la ligne droite
+    numerateur = R_max * R_min * np.sin(pi_sur_n)
+    denominateur = R_min * np.sin(pi_sur_n - phi) + R_max * np.sin(phi)
+    R = numerateur / denominateur
+    
+    # 3. Application du masque
+    mask = R_grid > (R + 1e-3)
+       
+    # # Code utilisé pour générer l'étoile
+    # rayon = a * (1 + 0.4 * np.sin(5 * angles))
+    # points = np.array([rayon * np.cos(angles), rayon * np.sin(angles)])
+    
+    # 3. Extraction des coordonnées des points extérieurs sous forme de liste (N_ext, 2)
+    X_eval = np.column_stack((X_grid[mask], Y_grid[mask]))
+    
+    print(f"Calcul BEM sur {len(X_eval)} points extérieurs en cours (cela peut prendre un moment)...")
+    
+    # 4. Calcul du champ diffusé par la BEM sur ces points
+    u_diff_X = fonctions.u(X_eval,points,segments, N, p_vals, nq,G,k)
+    
+    # 5. Ajout du champ incident (même définition que dans la fonction analytique)
+    u_inc_X = np.exp(-1j * k * X_eval[:, 0])
+    
+    # 6. Champ total sur les points valides
+    u_tot_X = u_diff_X + u_inc_X
+    
+    # 7. Reconstitution de la matrice 2D (on met NaN à l'intérieur de l'objet)
+    u_tot_champ = np.full(R.shape, np.nan, dtype=complex)
+    u_tot_champ[mask] = u_tot_X
+    
+    # 8. Affichage
+    plt.figure(figsize=(9, 7))
+    plt.pcolormesh(X_grid, Y_grid, np.real(u_tot_champ), cmap='RdBu_r', shading='auto', vmin=-2, vmax=2)
+    
+    # # On dessine l'obstacle
+    # cercle = plt.Circle((0, 0), a, color='dimgray', zorder=10)
+    # plt.gca().add_patch(cercle)
+    # On dessine l'obstacle (carré de côté 2a centré en 0,0)
+    # carre = plt.Rectangle((-a, -a), 2*a, 2*a, color='dimgray', zorder=10)
+    # plt.gca().add_patch(carre)
+    # Génération des 10 angles correspondant aux sommets (5 pointes + 5 creux)
+    # On ajoute +1 pour fermer la boucle au point de départ
+    angles_poly = np.linspace(0, 2*np.pi, 2*n + 1)
+    
+    # Alternance des rayons : R_max pour les indices pairs, R_min pour les impairs
+    rayons_poly = np.where(np.arange(2*n + 1) % 2 == 0, R_max, R_min)
+    
+    # Conversion polaire -> cartésien
+    x_poly = rayons_poly * np.cos(angles_poly+np.pi/2)
+    y_poly = rayons_poly * np.sin(angles_poly+np.pi/2)
+    
+    # Création et ajout du polygone strict sur le graphe
+    sommets = np.column_stack((x_poly, y_poly))
+    etoile_patch = Polygon(sommets, color='dimgray', zorder=10)
+    plt.gca().add_patch(etoile_patch)
+
+    # # 1. Génération des points du contour de l'étoile (500 points suffisent pour un tracé lisse)
+    # angles = np.linspace(0, 2*np.pi, 500)
+    
+    # # Formule de l'onde exacte pour le rayon
+    # rayon = a * (1 + 0.4 * np.sin(5 * angles))#(1 + 0.4 * (2 / np.pi) * np.arcsin(np.sin(5 * angles)))
+    
+    # # Conversion polaire -> cartésien
+    # x_etoile = rayon * np.cos(angles)
+    # y_etoile = rayon * np.sin(angles)
+    
+    # # Regroupement des x et y dans un tableau de coordonnées (N, 2)
+    # sommets = np.column_stack((x_etoile, y_etoile))
+    
+    # # 2. Création et ajout du polygone sur le graphe
+    # etoile = Polygon(sommets, color='dimgray', zorder=10)
+    # plt.gca().add_patch(etoile)
+    # ##fin obstacle etoile
+
+    plt.colorbar(label="Re(u_total) - BEM")
+    plt.title(f"Visualisation de la diffraction (BEM)\nk={k}, a={a}, Points BEM: {N}")
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.axis('equal')
+    plt.show()
+    print("Affichage terminé !")
+
+
+if (test_geom == True):
+    a=1
+    k = 5
+    N=100
+    nq = 10
+    r_obs = 2
+
+    maillage = fonctions.maillage_segments(N, a, forme="etoile")
+    points, segments, milieux, longueurs, normales = maillage
+    valeurs_p = p_num(maillage, nq, nq, N, k)
+    plot_diffraction_2D_BEM(points, segments, N, valeurs_p, nq, k, a, L_domaine=4, resolution=100)
 

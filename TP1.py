@@ -103,7 +103,7 @@ def A(X, points, segments, N, nq, k): #quad est une quadrature (tableau de taill
 def u(X, points, segments, N, p, nq, k):
     return A(X, points, segments, N, nq, k) @ p
 
-def calcul_p(milieux, k, a, N_serie):
+def calcul_p_analytique(milieux, k, a, N_serie):
     x = milieux[:, 0]
     y = milieux[:, 1]
     
@@ -111,6 +111,27 @@ def calcul_p(milieux, k, a, N_serie):
     
     return fonctions.p(r, theta, k, a, N_serie)
 
+
+def evaluer_cas(N, nq, r_obs, a=1, k=5, N_serie=30, N_obs=60):
+    """
+    Fonction utilitaire qui refait tout le calcul BEM pour un triplet (N, nq, r_obs) donné
+    et renvoie l'erreur relative.
+    """
+    # 1. Maillage obstacle
+    points, segments, milieux, longueurs, normales = fonctions.maillage_segments(N, a, forme="cercle")
+    valeurs_p = calcul_p_analytique(milieux, k, a, N_serie)
+    
+    # 2. Maillage observation
+    X, _, _, _, _ = fonctions.maillage_segments(N_obs, r_obs, forme="cercle")
+    R_obs, Theta_obs = fonctions.cartesien_to_cylindrique(X[:,0], X[:,1])
+    
+    # 3. Calculs
+    u_X = u(X, points, segments, N, valeurs_p, nq, k) 
+    
+    u_analytique = fonctions.u_diff(R_obs, Theta_obs, k, a, N_serie)
+    
+    # 4. Erreur
+    return calcul_erreur_relative(u_X, u_analytique)
 
 def calcul_erreur_relative(u_num, u_ref):
     """
@@ -184,7 +205,7 @@ k = 5
 
 # --- 1. Résolution BEM ---
 points, segments, milieux, longueurs, normales = fonctions.maillage_segments(N, a, forme="cercle")
-valeurs_p = calcul_p(milieux, k, a, N_serie)
+valeurs_p = calcul_p_analytique(milieux, k, a, N_serie)
 
 # --- 2. Évaluation sur les points d'observation ---
 r_obs = 1.0000001
@@ -211,27 +232,6 @@ print(f"Erreur relative (Norme infinie) : {erreur_rel:.4e} (soit {erreur_rel*100
 # # Comparaison des courbes 1D sur le périmètre d'observation
 # plot_comparaison_1D_cercle(X, u_X, u_analytique)
 
-
-def evaluer_cas(N, nq, r_obs, a=1, k=5, N_serie=30, N_obs=60):
-    """
-    Fonction utilitaire qui refait tout le calcul BEM pour un triplet (N, nq, r_obs) donné
-    et renvoie l'erreur relative.
-    """
-    # 1. Maillage obstacle
-    points, segments, milieux, longueurs, normales = fonctions.maillage_segments(N, a, forme="cercle")
-    valeurs_p = calcul_p(milieux, k, a, N_serie)
-    
-    # 2. Maillage observation
-    X, _, _, _, _ = fonctions.maillage_segments(N_obs, r_obs, forme="cercle")
-    R_obs, Theta_obs = fonctions.cartesien_to_cylindrique(X[:,0], X[:,1])
-    
-    # 3. Calculs
-    u_X = u(X, points, segments, N, valeurs_p, nq, k) 
-    
-    u_analytique = fonctions.u_diff(R_obs, Theta_obs, k, a, N_serie)
-    
-    # 4. Erreur
-    return calcul_erreur_relative(u_X, u_analytique)
 
 
 def etude_convergence_N(nq_fixe=6, r_obs_fixe=1.01):
@@ -446,7 +446,7 @@ k = 5
 
 # --- 1. Résolution BEM ---
 points, segments, milieux, longueurs, normales = fonctions.maillage_segments(N, a, forme="cercle")
-valeurs_p_sommets = calcul_p(points, k, a, N_serie)
+valeurs_p_sommets = calcul_p_analytique(points, k, a, N_serie)
 
 # --- 2. Évaluation sur les points d'observation ---
 r_obs = 1.0000001
@@ -541,7 +541,7 @@ print(f"Erreur relative (Norme infinie) : {erreur_rel:.4e} (soit {erreur_rel*100
 
 def plot_diffraction_2D_BEM(points, segments, N, p_vals, nq, k, a, L_domaine=5, resolution=80):
     """
-    Calcule et affiche le champ total (incident + BEM) sur une grille 2D.
+    Calcule et affiche le champ total (incident + BEM) sur une grille 2D. avec valeurs de p en arguments
     Attention: Le temps de calcul peut être long car il n'est pas vectorisé.
     """
     print(f"Génération de la grille ({resolution}x{resolution})...")
@@ -608,7 +608,7 @@ k = 5
 
 # --- 1. Résolution BEM ---
 points, segments, milieux, longueurs, normales = fonctions.maillage_segments(N, a, forme="carre")
-valeurs_p = calcul_p(milieux, k, a, N_serie)
+valeurs_p = calcul_p_analytique(milieux, k, a, N_serie)
 
 # --- 2. Évaluation sur les points d'observation ---
 nq = 4 # ordre de quadrature

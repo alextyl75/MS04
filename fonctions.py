@@ -20,8 +20,21 @@ def maillage_segments(N, a, forme):
         
     elif forme == "etoile":
         # Modulation du rayon avec un cosinus pour créer 5 branches
-        rayon = a * (1 + 0.4 * np.cos(5 * angles))
-        points = np.array([rayon * np.cos(angles), rayon * np.sin(angles)])
+        # rayon = a * (1 + 0.4 * np.sin(5 * angles))
+        n = 5            # Nombre de branches de l'étoile
+        R_max = 1.4 * a  # Rayon des pointes (équivalent à 1 + 0.4)
+        R_min = 0.6 * a  # Rayon des creux (équivalent à 1 - 0.4)
+        
+        
+        # 1. On "replie" l'angle pour toujours se situer sur un demi-secteur angulaire [0, pi/n]
+        pi_sur_n = np.pi / n
+        phi = pi_sur_n - np.abs((angles % (2 * pi_sur_n)) - pi_sur_n)
+        
+        # 2. Application de l'équation polaire de la ligne droite
+        numerateur = R_max * R_min * np.sin(pi_sur_n)
+        denominateur = R_min * np.sin(pi_sur_n - phi) + R_max * np.sin(phi)
+        rayon = numerateur / denominateur
+        points = np.array([rayon * np.cos(angles+np.pi/2), rayon * np.sin(angles+np.pi/2)])
     
     points = points.T #mettre au format (N,2)
     segments = [[i, (i + 1) % N] for i in range(N)]
@@ -131,3 +144,43 @@ def affiche_p(milieux, k, a, N_serie):
     fig.suptitle(f"Visualisation du champ p sur la frontière (k={k}, N={N_serie})", fontsize=14)
     plt.tight_layout()
     plt.show()
+
+# fonctions pour calcul complet bem
+def quad_Green(G, x, a, b, nq,k):
+    sum = 0
+    xi, w = np.polynomial.legendre.leggauss(nq)
+
+    for i in range(nq):
+        sum += w[i] * G(x, 0.5 * (a+b) + 0.5 * xi[i] * (b-a),k)
+
+    sum *= 0.5 * np.linalg.norm(a-b)
+
+    return sum
+
+
+
+
+def A(X, points, segments, N, nq,G, k): #quad est une quadrature (tableau de taille n_q) contenant les tableaux poid,point
+    n_obs = np.shape(X)[0]
+    A = np.zeros((n_obs,N), dtype=complex)
+    print("A",np.shape(A))
+    print("n_obs",n_obs)
+    for i in range(n_obs):
+        for j in range(N):
+            A[i][j] = quad_Green(G,X[i,:],points[segments[j][0]],points[segments[j][1]],nq,k)
+    return A
+
+
+def calcul_erreur_relative(u_num, u_ref):
+    """
+    Calcule l'erreur relative en norme infinie : max|u_num - u_ref| / max|u_ref|
+    """
+    erreur_absolue_max = np.max(np.abs(u_num - u_ref))
+    norme_ref_max = np.max(np.abs(u_ref))
+    
+    return erreur_absolue_max / norme_ref_max
+
+def u(X, points, segments, N, p, nq,G, k):
+    return A(X, points, segments, N, nq,G, k) @ p
+
+

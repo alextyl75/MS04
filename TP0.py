@@ -100,11 +100,11 @@ plt.tight_layout()
 
 # --- Question 2---
 
-points,segments,milieux,longueurs,normales = maillage_segments(N, a, forme="cercle")
+points,segments,milieux,longueurs,normales = fonctions.maillage_segments(N, a, forme="etoile")
 
 print("Liste des segments :")
 print(segments)
-affichage_maillage(points,segments,milieux,longueurs,0.2*normales)
+fonctions.affichage_maillage(points,segments,milieux,longueurs,0.2*normales)
 
 
 
