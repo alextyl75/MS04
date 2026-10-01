@@ -105,6 +105,13 @@ def p(r, theta, k, a, N): #N est le nombre de terme de la série
     trace_u_inc = -1j*k*np.cos(theta)*np.exp(-1j*k*r*np.cos(theta))
     return (-trace_u_d(r, theta, k, a, N)-trace_u_inc)
 
+def calcul_p(milieux, k, a, N_serie):
+    x = milieux[:, 0]
+    y = milieux[:, 1]
+    
+    r, theta = cartesien_to_cylindrique(x, y)
+    
+    return p(r, theta, k, a, N_serie)
 
 
 

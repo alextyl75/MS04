@@ -1,4 +1,3 @@
-# from distutils.log import error
 import fonctions
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,7 +18,9 @@ test_erreur_relative = False
 test_q6_N = False
 test_q6_nq = False
 test_q8 = False
-test_geom = True
+test_geom = False
+test_q6_nq = False
+
 
 # Fonctions du maillage
 
@@ -157,7 +158,8 @@ def A_assemble(points, segments, nq, nq_tilde, N, k):
 # comparer intégrale constante vs Legendre
 
 # Comparaison traitements et pas traitements de la singularité
-if test_q5:
+if test_q5 and False:
+    N = 500
     points,segments,milieux,longueurs,normales = fonctions.maillage_segments(N, a, "cercle")
     #fonctions.affichage_maillage(points,segments,milieux,longueurs,normales)
 
@@ -165,6 +167,9 @@ if test_q5:
     nq_tilde_tab = [i+1 for i in nq_tab] 
     error_tab = []
 
+    nq_tab = [10]
+    nq_tilde_tab = [10] 
+    
     for i in range(len(nq_tab)):
         A_traitement = A_assemble(points=points, segments=segments, nq=nq_tab[i], nq_tilde=nq_tilde_tab[i], N=N, k=k)
         A_pas_traitement = A_assemble_pas_traitement(points=points, segments=segments, nq=nq_tab[i], nq_tilde=nq_tilde_tab[i], N=N, k=k)
@@ -181,6 +186,95 @@ if test_q5:
         error_tab.append(np.mean(np.array([np.linalg.norm(diag_traitement[i] -  diag_pas_traitement[i]) for i in range(len(diag_pas_traitement))])))
 
     print(error_tab)
+
+if test_q5:
+    N = 10
+    points,segments,milieux,longueurs,normales = fonctions.maillage_segments(N, a, "cercle")
+    nq = 10
+    nq_tilde = 11
+
+    A_pas_traitement = A_assemble_pas_traitement(points=points, segments=segments, nq=nq, nq_tilde=nq, N=N, k=k)
+    A_pas_traitement_nqtilde = A_assemble_pas_traitement(points=points, segments=segments, nq=nq, nq_tilde=nq_tilde, N=N, k=k)
+
+    diag_pas_traitement = np.diag(A_pas_traitement)
+    diag_pas_traitement_nqtilde = np.diag(A_pas_traitement_nqtilde)
+
+    print("Diagonale sans traitement nq = nq_tilde :")
+    print(diag_pas_traitement)
+
+    print("\nDiagonale sans traitement nq_tilde = nq + 1  :")
+    print(diag_pas_traitement_nqtilde)
+
+if test_q5:
+    Nb_test = 10
+    a, k = 1, 1
+    nq = 10
+    nq_tilde = nq+1
+
+    N_tab = [30*i for i in range(1,Nb_test+1)]
+    error_tab = []
+    error_tab_sing = []
+
+    for Npoints in N_tab:
+        points,segments,milieux,longueurs,normales = fonctions.maillage_segments(Npoints, a, "cercle")
+
+        A = A_assemble(points=points, segments=segments, nq=nq, nq_tilde=nq, N=Npoints, k=k)
+        A_sing = A_assemble_pas_traitement(points=points, segments=segments, nq=nq, nq_tilde=nq_tilde, N=Npoints, k=k)
+        b = B(points=points, segments=segments, N=Npoints, nq=nq, k=k)
+
+        p_num, info = gmres(A, b, rtol=1e-10)
+        p_num_sing, info = gmres(A_sing, b, rtol=1e-10)
+
+        p_analytique = fonctions.calcul_p(milieux, k, a, N_serie=20)
+
+        erreur_relative = (np.linalg.norm(p_num - p_analytique)/ np.linalg.norm(p_analytique))
+        error_tab.append(erreur_relative)
+
+        erreur_relative_sing = (np.linalg.norm(p_num_sing - p_analytique)/ np.linalg.norm(p_analytique))
+        error_tab_sing.append(erreur_relative_sing)
+
+    plt.figure(figsize=(8, 6))
+
+    plt.loglog(
+        N_tab,
+        error_tab,
+        "o-",
+        label="Avec traitement de la singularité"
+    )
+
+    plt.loglog(
+        N_tab,
+        error_tab_sing,
+        "s-",
+        label="Sans traitement de la singularité"
+    )
+
+    plt.xlabel(r"$N_{\mathrm{points}}$")
+    plt.ylabel(r"Erreur relative")
+
+    plt.title(
+    rf"Assemblage avec singularité et sans singularité "
+    )
+
+    plt.legend()
+
+    plt.grid(True, which="both", linestyle="--", alpha=0.5)
+
+    plt.text(
+        0.03, 0.03,
+        rf"$n_q = {nq}$" "\n"
+        rf"$\tilde{{n}}_q = {nq_tilde}$" "\n"
+        rf"$a = {a}$" "\n"
+        rf"$k = {k}$",
+        transform=plt.gca().transAxes,
+        verticalalignment="bottom",
+        bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
+    )
+
+    plt.tight_layout()
+    plt.show()
+
+        
 
 # Question 6
 
@@ -271,11 +365,11 @@ if test_q6_N:
     plt.show()
 
 if test_q6_nq:
-    Nb_test = 1
+    Nb_test = 10
     a, k = 1, 1
-    Npoints = 500
+    Npoints = 400
 
-    nq_tab = [2*i for i in range(1,Nb_test+1)]
+    nq_tab = [1*i for i in range(1,Nb_test+1)]
     error_tab = []
 
     for nq in nq_tab:
@@ -294,7 +388,8 @@ if test_q6_nq:
         print(N, " ", erreur_relative)
 
     plt.figure(figsize=(7, 5))
-    plt.loglog(
+
+    plt.semilogy(
         nq_tab,
         error_tab,
         "o-"
@@ -302,14 +397,29 @@ if test_q6_nq:
 
     plt.xlabel(r"$n_q$")
     plt.ylabel(r"Erreur relative")
+
     plt.title(r"Erreur relative en fonction de $n_q$")
+
+    # Paramètres du test
+    plt.text(
+        0.97, 0.97,
+        rf"$N = {Npoints}$" + "\n" +
+        rf"$a = {a}$" + "\n" +
+        rf"$k = {k}$",
+        transform=plt.gca().transAxes,
+        ha="right",
+        va="top",
+        bbox=dict(
+            boxstyle="round",
+            facecolor="white",
+            alpha=0.8
+        )
+    )
 
     plt.grid(True, which="both", linestyle="--", alpha=0.5)
 
     plt.tight_layout()
-    plt.show()
-
-        
+    plt.show() 
 
 def p_num(maillage, nq, nq_tilde, Npoints, k):
     points,segments,milieux,longueurs,normales = maillage
@@ -355,9 +465,6 @@ if(test_q8 ==True):
     nq = 10
     r_obs = 2
     print(evaluation_bem_sur_observation_cercle(N, nq, r_obs, a=1, k=5, N_serie=30, N_obs=60))
-
-
-
 
 
 def plot_diffraction_2D_BEM(points, segments, N, p_vals, nq, k, a, L_domaine=5, resolution=80):
