@@ -3,16 +3,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 
-test_q12 = False
-test_q3 = True
+test_q12 = True
+test_q3 = False
 
 def matrice_faible_random(n,m,rang):
     A = np.zeros((n,m))
     for i in range(n):
         for j in range(m):
-            if (i<=rang) and (j<=rang):
+            if (i<rang) and (j<rang):
                 A[i,j] = i**j# random.random()  # Entre 0.0 et 1.0 (exclu)
     return A
+
 if test_q12:
     U,sigma,V = np.linalg.svd(matrice_faible_random(10,15,5))
     print(np.shape(sigma),sigma)# une valeur non nulle de plus que le rang analytique ?
