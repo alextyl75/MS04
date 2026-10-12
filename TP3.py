@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import random
 
 test_q1 = False
-test_q2 = True
-test_q3 = False
+test_q2 = False
+test_q3 = True
 
 def matrice_faible_random(n,m,rang):
     A = np.zeros((n,m))
@@ -36,7 +36,7 @@ if test_q2:
     N = 10
     M = 15
     rang_tab = [i for i in range(1, 11)]
-    error_tab = []      
+    error_tab = []
 
     A = matrice_faible_random(N, M, N)
     U, sigma, Vt = np.linalg.svd(A)
@@ -67,21 +67,67 @@ if test_q2:
 
     plt.show()
 
-def ACA_complet(A):
-    '''
-    Ne fait qu'une itération
-    '''
-    i, j = np.unravel_index(np.argmax(np.abs(A)), A.shape)
-    
-    pivot = A[i, j]
-    update = np.outer(A[:, j] / pivot, A[i, :])
-    return A - update
+def ACA_iteration(R, rang_iteration):
+    """Fais l'itération de ACA et renvoie u_{k+1} et v_{k+1}^T"""
+
+    m, n = R.shape
+
+    i_star, j_star = np.unravel_index(np.argmax(np.abs(R)), R.shape)
+    pivot = R[i_star, j_star]
+
+    if pivot == 0:
+        return None, None
+
+    # Nouvelle colonne
+    u_k = R[:, j_star] / pivot
+    v_k_trans = R[i_star, :]
+
+    return u_k, v_k_trans
+
+def ACA_complet(A, rang_final):
+    n, m = A.shape
+
+    A_approx = np.zeros((n, m))
+    R = A.copy()
+
+    for rang_iteration in range(1, rang_final + 1):
+        u, v = ACA_iteration(R, rang_iteration)
+
+        if u is None:
+            break
+
+        A_approx = A_approx + np.outer(u, v)
+        R = R - np.outer(u, v)
+
+    return A_approx, R
 
 if test_q3:
-    A = matrice_faible_random(5,5,3)
-    print(A)
-    A = ACA_complet(A)
-    print(A)
+    N = 10
+    M = 15      
+
+    A = matrice_faible_random(N, M, N)
+    U, sigma, Vt = np.linalg.svd(A)
+
+    rang_tab = [i for i in range(6, 11)]
+    print(rang_tab)
+    error_tab = []
+
+    for rang in rang_tab :
+        A_r, R = ACA_complet(A, rang)
+        error_tab.append(np.linalg.norm(R))
+
+    print(error_tab)
+    print("taille", len(error_tab))
+    print("taille", len(rang_tab))
+
+    #plt.semilogy(rang_tab, error_tab, 'o-')
+    plt.figure()
+    plt.plot(rang_tab, error_tab, 'o-')
+    plt.xlabel("Rang $r$")
+    plt.ylabel(r"Résidu $\|R_r\|_F$")
+    plt.title("Résidu de l'ACA complet en fonction du rang")
+    plt.grid(True, which="both")
+    plt.show()
 
 def ACA_ligne(A,index_ligne):
     '''
