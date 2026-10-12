@@ -33,12 +33,16 @@ if test_q3:
     A = ACA_complet(A)
     print(A)
 
-def ACA_ligne(A):
+def ACA_ligne(A,index_ligne):
     '''
-    Ne fait qu'une itération
+    Ne fait qu'une itération sur la ligne i
     '''
-    i, j = np.unravel_index(np.argmax(np.abs(A)), A.shape)
+    j = np.argmax(np.abs(A[index_ligne, :]))
     
-    pivot = A[i, j]
-    update = np.outer(A[:, j] / pivot, A[i, :])
+    pivot = A[index_ligne, j]
+    if pivot == 0:
+        print("pivot nul sur cette ligne")
+        return A
+
+    update = np.outer(A[:, j] / pivot, A[index_ligne, :])
     return A - update
