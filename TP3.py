@@ -3,12 +3,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 
-
-
 test_q1 = False
 test_q2 = False
-test_q3 = True
-test_q4 = True
+test_q3 = False
+test_q3_bis = True
+test_q4 = False
 
 def matrice_faible_random(n,m,rang):
     A = np.zeros((n,m))
@@ -33,7 +32,7 @@ if test_q1:
     A = matrice_faible_random(10,15,5)
     print(A)
     U, sigma, V = np.linalg.svd(A)
-    print(np.shape(sigma),sigma)# une valeur non nulle de plus que le rang analytique ?
+    print(np.shape(sigma),sigma)
 
 if test_q2:
     N = 10
@@ -109,29 +108,54 @@ if test_q3:
     M = 15      
 
     A = matrice_faible_random(N, M, N)
+    rang_tab = [i for i in range(1, 11)]
+    error_tab = []
+    
+    for rang in rang_tab :
+        A_r, R = ACA_complet(A, rang)
+        error_tab.append(np.linalg.norm(R))
+
+    plt.semilogy(rang_tab, error_tab, 'o-')
+    plt.xlabel("Rang numérique $r$")
+    plt.ylabel(r"Résidu $\|A - A_r\|_F$")
+    plt.title("Résidu de l'ACA complet en fonction du rang de $A_r$")
+    plt.grid(True, which="both")
+
+    # Informations affichées à droite du graphique
+    m, n = A.shape
+    rang_A = np.linalg.matrix_rank(A)
+
+    plt.subplots_adjust(right=0.72)
+    plt.text(
+        1.05, 0.5,
+        f"rang(A) = {rang_A}\nsize(A) = ({m}, {n})",
+        transform=plt.gca().transAxes,
+        va="center",
+        fontsize=11,
+        bbox=dict(facecolor="white", edgecolor="gray", boxstyle="round,pad=0.5")
+    )
+
+    plt.show()
+
+if test_q3_bis:
+    N = 10
+    M = 15      
+
+    A = matrice_faible_random(N, M, N)
     U, sigma, Vt = np.linalg.svd(A)
 
-    rang_tab = [i for i in range(6, 11)]
-    print(rang_tab)
-    error_tab = []
+    rang_tab = [i for i in range(1, 11)]
+    error_tab, error_tab_svd = [], []
 
     for rang in rang_tab :
         A_r, R = ACA_complet(A, rang)
         error_tab.append(np.linalg.norm(R))
 
-    print(error_tab)
-    print("taille", len(error_tab))
-    print("taille", len(rang_tab))
+        M_r = svd_tronquee(U, sigma, Vt, rang)
+        error_tab_svd.append(np.linalg.norm(A - M_r))
 
-    #plt.semilogy(rang_tab, error_tab, 'o-')
-    plt.figure()
-    plt.plot(rang_tab, error_tab, 'o-')
-    plt.xlabel("Rang $r$")
-    plt.ylabel(r"Résidu $\|R_r\|_F$")
-    plt.title("Résidu de l'ACA complet en fonction du rang")
-    plt.grid(True, which="both")
-    plt.show()
-
+    print("Rang tab", rang_tab)
+    print("LACA - SVD", np.array(error_tab) - np.array(error_tab_svd))
 
 def ACA_partiel(A, N, epsilon):
     A_approx = np.zeros((N,N))
