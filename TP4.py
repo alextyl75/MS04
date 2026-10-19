@@ -90,10 +90,6 @@ afficher_arbre(noeud_racine)
 
 
 
-<<<<<<< HEAD
-=======
-
->>>>>>> ca915a3507c45bb4961f88cc770f6489335606bd
 
 
 ind_points =[]
