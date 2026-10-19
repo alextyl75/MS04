@@ -31,9 +31,13 @@ class noeud:
         """Nombre de degrés de liberté dans le cluster."""
         return len(self.indices)
 
-def construction_cluster(Npoints, Nleaf, distance):
-
-    def generation_noeud(noeud):
 
 
-    
+ind_points =[]
+points = []
+Test_points =[]
+def Test_arbre(arbre):
+    for noeud in arbre:
+        if noeud.fils1 == None :
+            for
+
