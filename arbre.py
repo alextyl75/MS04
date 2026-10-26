@@ -287,3 +287,53 @@ def affichage_clusters(points, segments, liste_clusters, Npoints, Nleaf, a, affi
     plt.tight_layout()
     plt.show()
 
+#================== Test de validité =============
+
+def test_validite(arbre, points_maillage):
+    """
+    On parcourt l'arbre, on colorie les noeuds sur une feuille. Pour que l'arbre soit valide, il faut que :
+    - tous les points soient coloriés exactement 1 fois (test 1 et 2)
+    - points_colorie == points_maillage à la fin du code (test 3)
+    """
+
+    points_colories = []
+
+    def coloriage(noeud):
+        if noeud.is_leaf:
+            points_colories.extend(noeud.list_pts)
+        else:
+            coloriage(noeud.fils1)
+            coloriage(noeud.fils2)
+
+    coloriage(arbre[0])
+
+    # premier test : taille des listes
+    if len(points_colories) != len(points_maillage):
+        print(f"Arbre non-valide : {len(points_colories)} points clusters vs {len(points_maillage)} points maillage.")
+        return False
+
+    # verification qu'il n'y a pas de doublon (conversion en set qui ne peut pas contenir de doublons)
+    # conversion en tuples pour pouvoir convertir en set
+    points_colories_tuples = [tuple(p) for p in points_colories]
+    points_colories_set = set(points_colories_tuples)
+
+    # deuxieme test : doublons
+    if len(points_colories_set) != len(points_colories):
+        print(f"Abre non-valide : {len(points_colories) - len(points_colories_set)} doublons")
+        return False
+
+    # troisieme test : comparaison des ensembles de points
+    points_maillage_tuples = [tuple(p) for p in points_maillage]
+    points_maillage_set = set(points_maillage_tuples)
+
+    if points_colories_set != points_maillage_set:
+        print("Arbre non-valide : les points de l'arbre ne correspondent pas aux points du maillage")
+        return False
+
+    print("Arbre valide")
+    return True
+
+
+    
+
+
