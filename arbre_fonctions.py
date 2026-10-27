@@ -125,7 +125,7 @@ def afficher_arbre_terminal(noeud, prefixe=""):
     ymax = max(p[1] for p in noeud.box)
 
     # Indicateur si le nœud est une feuille
-    statut = "🍃 Feuille" if noeud.is_leaf else "🔀 Nœud interne"
+    statut = "Feuille" if noeud.is_leaf else "Noeud interne"
 
     # Affichage des informations du nœud
     print(
@@ -393,6 +393,7 @@ def verification_indices_consecutifs(arbre, points_maillage):
 
         # Création du dictionnaire inverse 
         sigma_inv_dict = {ancien_id: nouvel_id for nouvel_id, ancien_id in enumerate(sigma)}
+        print("sigma_inv_dict", sigma_inv_dict  )
 
         def test_index(noeud):
             # Nouveaux indices attribués par sigma à cette feuille
@@ -434,6 +435,31 @@ def verification_indices_consecutifs(arbre, points_maillage):
         return valide
 
     return False
+
+# Question 5
+def hauteur(arbre):
+    def exploration(noeud):
+        if noeud.is_leaf:
+            return noeud.niveau
+
+        prof1 = exploration(noeud.fils1)
+        prof2 = exploration(noeud.fils2)
+
+        return max(prof1, prof2)
+
+    return exploration(arbre[0])   
+
+def nombre_feuilles(arbre):
+    def exploration(noeud):
+        if noeud.is_leaf:
+            return 1
+
+        leaf1 = exploration(noeud.fils1)
+        leaf2 = exploration(noeud.fils2)
+
+        return leaf1 + leaf2
+
+    return exploration(arbre[0])   
 
 
     
