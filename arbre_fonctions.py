@@ -146,11 +146,7 @@ def construction_arbre(Npoints, Nleaf, points,strat = "geo"):
     # Conversion initiale des points au format (idx, coordonnees)
     points_indexed = [(i, pt) for i, pt in enumerate(points)]
     box, diam = calculer_box_et_diam(points_indexed)
-<<<<<<< HEAD
     racine = Noeud(box, points_indexed, niveau=0, indice_local=0,diam=diam)
-=======
-    racine = Noeud(box, points_indexed, niveau=0, indice_local=0, diam=diam)
->>>>>>> e5670398acf5c46a8708e2416c9c4390a1df30e2
     iteration(racine)
 
     return cluster
