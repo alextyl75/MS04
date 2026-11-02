@@ -375,7 +375,11 @@ if __name__ == "__main__":
     # --------------------------------------------------------------------------
     if d:
         plt.figure(figsize=(10, 6))
+<<<<<<< Updated upstream
         tailles_N = [500,1000,1500,2000,2500]
+=======
+        tailles_N = [50,100,200]
+>>>>>>> Stashed changes
         t_svd, t_acac, t_acap, t_free = [], [], [], []
         t_assemblage_seul = []
         eps_bench = 1e-6
@@ -408,7 +412,7 @@ if __name__ == "__main__":
             # 5. ACA Free (calcul des entrées à la volée, sans A pré-assemblée)
             t0 = time.perf_counter()
             _ = ACA_partiel_free(pts_b, segs_b, nq, nq_tilde, k, N_val, eps_bench)
-            t_free.append(t_ass + time.perf_counter() - t0)
+            t_free.append(time.perf_counter() - t0)#t_free.append(t_ass + time.perf_counter() - t0)
 
         N_arr = np.array(tailles_N, dtype=float)
 
