@@ -536,5 +536,9 @@ def affichage_diametre_moyen(arbre,titre):
     print(titre,diam/nb)
 
 
+def is_admissible(noeudX, noeudY, eta):
+    return min(noeudX.diam,noeudY.diam)<= eta * distance_box(noeudX,noeudY)
+
+
 
 
