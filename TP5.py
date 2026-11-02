@@ -1,11 +1,13 @@
 import fonctions
 import arbre_fonctions
+import afficher_arbre_fonctions
+import test_arbre_fonctions
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-testq1 = False
-testq2 = False
+testq1 = True
+testq2 = True
 testq3 = True
 
 # Parametres
@@ -30,7 +32,7 @@ if testq1:
 
 if testq2:
     arbre_bloc = arbre_fonctions.arbre_bloc_construction(arbre_cluster, ETA)
-    arbre_fonctions.afficher_arbre_bloc(arbre_bloc[0])
+    afficher_arbre_fonctions.afficher_arbre_bloc(arbre_bloc[0])
     arbre_fonctions.arbre_bloc_partition(arbre_bloc[0], Npoints)
 
 # if testq3:
@@ -56,15 +58,14 @@ if testq3:
 
     points, segments, milieux, longueurs, normales = fonctions.maillage_segments(Npoints, a, forme="etoile")
     A = fonctions.A_assemble(points=points, segments=segments, nq=5, nq_tilde=5, N=Npoints, k=k)
-
-    # 1. Construction de l'arbre de clusters et de l'arbre de blocs
+     
     arbre_cluster = arbre_fonctions.construction_arbre(Npoints, Nleaf, points, strat="mediane")
     arbre_bloc = arbre_fonctions.arbre_bloc_construction(arbre_cluster, eta)
 
     # 2. Fonction de visualisation de la H-matrice
     def visualise_matrice(arbre_bloc, arbre_cluster, Npoints, eta):
         # Récupération de la permutation (Q4) pour que chaque cluster ait des indices consécutifs
-        perm = arbre_fonctions.permutation_indice(arbre_cluster)
+        perm = test_arbre_fonctions.permutation_indice(arbre_cluster)
         perm_inv = {ancien_id: nouvel_id for nouvel_id, ancien_id in enumerate(perm)}
 
         fig, ax = plt.subplots(figsize=(8, 8))
