@@ -113,8 +113,6 @@ def calcul_p(milieux, k, a, N_serie):
     
     return p(r, theta, k, a, N_serie)
 
-
-
 def affiche_p(milieux, k, a, N_serie):
     x = milieux[:, 0]
     y = milieux[:, 1]
@@ -163,9 +161,6 @@ def quad_Green(G, x, a, b, nq,k):
     sum *= 0.5 * np.linalg.norm(a-b)
 
     return sum
-
-
-
 
 def A(X, points, segments, N, nq,G, k): #quad est une quadrature (tableau de taille n_q) contenant les tableaux poid,point
     n_obs = np.shape(X)[0]
@@ -287,4 +282,89 @@ def A_assemble(points, segments, nq, nq_tilde, N, k):
             A[i][j] = Aij
 
     return A
+
+
+def ACA_partiel(A, N, epsilon, verbose=False):
+    """
+    ACA avec pivotage partiel (renvoie les listes u_k_used, v_k_used).
+    Complexité O(r^2 * N).
+    """
+    A_approx_norm = 0.0
+    next_indice = 0
+    index_used = []
+    cols_used = []
+    v_k_used = []
+    u_k_used = []
+    norm_prod_uv = 0.0
+
+    def ACA_partiel_step(index_ligne):
+        res_row = A[index_ligne, :].copy().astype(float)
+        for u, v in zip(u_k_used, v_k_used):
+            res_row -= u[index_ligne] * v
+
+        abs_res_row = np.abs(res_row)
+        abs_res_row[cols_used] = -1
+        j = np.argmax(abs_res_row)
+        pivot = res_row[j]
+
+        if np.abs(pivot) < 1e-12:
+            u_k = np.zeros(N)
+            v_k = np.zeros(N)
+            next_indice_val = (index_ligne + 1) % N
+        else:
+            res_col = A[:, j].copy().astype(float)
+            for u, v in zip(u_k_used, v_k_used):
+                res_col -= u * v[j]
+
+            u_k = res_col / pivot
+            v_k = res_row
+            cols_used.append(j)
+            index_used.append(index_ligne)
+
+            col_abs = np.abs(u_k).copy()
+            col_abs[index_used] = -1
+            next_indice_val = np.argmax(col_abs)
+
+        v_k_used.append(v_k)
+        u_k_used.append(u_k)
+        return next_indice_val
+
+    step = 1
+    while (norm_prod_uv >= epsilon * A_approx_norm) and (step <= N):
+        next_indice = ACA_partiel_step(next_indice)
+
+        u_k = u_k_used[-1]
+        v_k = v_k_used[-1]
+        norm_prod_uv = np.linalg.norm(u_k) * np.linalg.norm(v_k)
+
+        if norm_prod_uv == 0.0:
+            u_k_used.pop()
+            v_k_used.pop()
+            break
+
+        sum_norm = 0.0
+        for l in range(len(u_k_used) - 1):
+            sum_norm += np.inner(u_k_used[l], u_k) * np.inner(v_k_used[l], v_k)
+
+        valeur_sous_racine = A_approx_norm**2 + 2 * sum_norm + norm_prod_uv**2
+        A_approx_norm = np.sqrt(max(0.0, valeur_sous_racine))
+        step += 1
+
+    if verbose:
+        print(f"Convergence atteinte en {len(u_k_used)} étapes : critère {norm_prod_uv:.2e} < {epsilon * A_approx_norm:.2e}")
+    return u_k_used, v_k_used
+
+
+def reconstruire_ACA_partiel(u_k_used, v_k_used, N=None):
+    """Reconstruit la matrice dense à partir des facteurs."""
+    if len(u_k_used) == 0:
+        if N is None:
+            raise ValueError("Préciser N si les listes sont vides.")
+        return np.zeros((N, N))
+
+    n_rows, n_cols = len(u_k_used[0]), len(v_k_used[0])
+    A_approx = np.zeros((n_rows, n_cols))
+    for u, v in zip(u_k_used, v_k_used):
+        A_approx += np.outer(u, v)
+    return A_approx
 
