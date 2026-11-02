@@ -146,11 +146,7 @@ def construction_arbre(Npoints, Nleaf, points,strat = "geo"):
     # Conversion initiale des points au format (idx, coordonnees)
     points_indexed = [(i, pt) for i, pt in enumerate(points)]
     box, diam = calculer_box_et_diam(points_indexed)
-<<<<<<< HEAD
     racine = Noeud(box, points_indexed, niveau=0, indice_local=0,diam=diam)
-=======
-    racine = Noeud(box, points_indexed, niveau=0, indice_local=0, diam=diam)
->>>>>>> e5670398acf5c46a8708e2416c9c4390a1df30e2
     iteration(racine)
 
     return cluster
@@ -637,3 +633,35 @@ def afficher_arbre_bloc(noeud, prefixe="", est_dernier=True):
         for i, fils in enumerate(fils_list):
             est_dernier_fils = (i == total_fils - 1)
             afficher_arbre_bloc(fils, nouveau_prefixe, est_dernier=est_dernier_fils)
+
+def arbre_bloc_partition(racine_bloc: Noeud_bloc, Npoints: int) -> bool:
+    total_couples = 0
+    feuilles_parcourues = []
+
+    def parcourt(noeud_bloc):
+        nonlocal total_couples
+        
+        if noeud_bloc.is_leaf:
+            if noeud_bloc in feuilles_parcourues:
+                raise ValueError(f"Erreur : le nœud {noeud_bloc} a été parcouru deux fois !")
+            
+            feuilles_parcourues.append(noeud_bloc)
+            
+            n_tau = len(noeud_bloc.tau.list_pts)
+            n_sigma = len(noeud_bloc.sigma.list_pts)
+            total_couples += n_tau * n_sigma
+
+        else:
+            if noeud_bloc.fils_list:
+                for fils in noeud_bloc.fils_list:
+                    parcourt(fils)
+    parcourt(racine_bloc)
+
+    attendu = Npoints * Npoints
+    if total_couples != attendu:
+        print(f"Erreur de partition : somme des couples = {total_couples} | attendu = {attendu}")
+        return False
+    else:
+        print(f"Partition valide : {len(feuilles_parcourues)} feuilles couvrent exactement {total_couples} couples ({Npoints}x{Npoints}).")
+        return True
+    

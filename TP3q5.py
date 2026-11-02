@@ -137,7 +137,6 @@ def reconstruire_ACA_partiel(u_k_used, v_k_used, N=None):
         A_approx += np.outer(u, v)
     return A_approx
 
-
 # ==============================================================================
 # 2. GÉNÉRATEURS DE MATRICES
 # ==============================================================================
@@ -214,7 +213,7 @@ if __name__ == "__main__":
     # --------------------------------------------------------------------------
     plt.figure(figsize=(10, 7))
     norm_A_coul = np.linalg.norm(A_num_coulomb, "fro")
-    rangs_test = range(1, 13)
+    rangs_test = range(1, 50)
     err_svd, err_aca_c = [], []
 
     for r in rangs_test:
@@ -231,6 +230,7 @@ if __name__ == "__main__":
         A_acap = reconstruire_ACA_partiel(u_list, v_list, N=N_test)
         rangs_acap_pts.append(len(u_list))
         err_acap_pts.append(np.linalg.norm(A_num_coulomb - A_acap, "fro") / norm_A_coul)
+
 
     plt.semilogy(rangs_test, err_svd, "o-", label="SVD Tronquée (optimale)")
     plt.semilogy(rangs_test, err_aca_c, "s--", label="ACA Complet")

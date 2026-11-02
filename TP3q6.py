@@ -247,7 +247,7 @@ def ACA_partiel_free(points, segments, nq, nq_tilde, k, N, epsilon, verbose=Fals
 # 3. SCRIPT PRINCIPAL DE TEST SUR LA MATRICE BEM A
 # ==============================================================================
 
-test_a = False
+test_a = True
 b = False 
 c = False
 d = True
@@ -255,7 +255,7 @@ d = True
 if __name__ == "__main__":
     plt.rcParams.update({"font.size": 11})
     
-    Npoints = 100
+    Npoints = 1000
     a = 1.0
     k = 1.0
     nq, nq_tilde = 10, 10
@@ -375,7 +375,7 @@ if __name__ == "__main__":
     # --------------------------------------------------------------------------
     if d:
         plt.figure(figsize=(10, 6))
-        tailles_N = [200,400,600,800,1000]
+        tailles_N = [500,1000,1500,2000,2500]
         t_svd, t_acac, t_acap, t_free = [], [], [], []
         t_assemblage_seul = []
         eps_bench = 1e-6
