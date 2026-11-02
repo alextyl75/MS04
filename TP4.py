@@ -9,9 +9,10 @@ test_q3 = False
 test_q4 = False
 test_q5_hauteur = False
 test_q5_feuille = False
+test_q7 = True
 
 # Parametres
-Npoints = 150
+Npoints = 200
 a = 1
 Nleaf = 5
 
@@ -139,3 +140,287 @@ if test_q5_feuille:
     plt.grid(True)
     plt.legend()
     plt.show()
+
+
+
+if test_q7:
+    a = 1
+    Npoints = 200
+    points, segments, milieux, longueurs, normales = fonctions.maillage_segments(Npoints, a, forme="cercle")
+
+    Nleaf_tab = [100, 75, 50, 25, 10, 5]
+    feuille_tab = []
+    profondeur_tab = []
+    
+    for Nleaf in Nleaf_tab:
+        liste_clusters = arbre_fonctions.construction_arbre(Npoints, Nleaf, points,strat="geo")
+        arbre_fonctions.affichage_diametre_moyen(liste_clusters,"cercle geo")
+        profondeur_tab.append(arbre_fonctions.hauteur(liste_clusters))
+
+    # Calcul de log2(Npoints) - log2(Nleaf)
+    hauteur_theorique = [np.log2(Npoints) - np.log2(Nleaf) for Nleaf in Nleaf_tab]
+
+    # Tracé du graphique
+    plt.figure(figsize=(8, 5))
+    plt.plot(Nleaf_tab, profondeur_tab, 'o-', label="Profondeur mesurée sur cercle stratégie géométrique")
+    plt.plot(
+        Nleaf_tab, 
+        hauteur_theorique, 
+        's--', 
+        label=rf"$\log_2(N_{{\mathrm{{points}}}}) - \log_2(N_{{\mathrm{{leaf}}}})$"
+    )
+
+    plt.xlabel(r"$N_{\mathrm{leaf}}$")
+    plt.ylabel("Hauteur de l'arbre")
+    plt.title(rf"Hauteur de l'arbre en fonction de $N_{{\mathrm{{leaf}}}}$ ($a = {a}$, $N_{{\mathrm{{points}}}} = {Npoints}$)")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+    for Nleaf in Nleaf_tab:
+            liste_clusters = arbre_fonctions.construction_arbre(Npoints, Nleaf, points)
+            feuille_tab.append(arbre_fonctions.nombre_feuilles(liste_clusters))
+    
+    feuille_theorique = [Npoints / Nleaf for Nleaf in Nleaf_tab]
+
+    print("Nleaf_tab :", Nleaf_tab)
+    print("feuille_tab :", feuille_tab)
+    print("feuille_theorique :", feuille_theorique)
+
+    # Tracé du graphique
+    plt.figure(figsize=(8, 5))
+    plt.plot(Nleaf_tab, feuille_tab, 'o-', label="Nombre de feuilles mesuré cercle strat géo ")
+    plt.plot(
+        Nleaf_tab, 
+        feuille_theorique, 
+        's--', 
+        label=rf"Théorique : $N_{{\mathrm{{points}}}} / N_{{\mathrm{{leaf}}}}$ "
+    )
+
+    plt.xlabel(r"$N_{\mathrm{leaf}}$")
+    plt.ylabel("Nombre de feuilles")
+    plt.title(rf"Nombre de feuilles de l'arbre en fonction de $N_{{\mathrm{{leaf}}}}$ ($a = {a}$, $N_{{\mathrm{{points}}}} = {Npoints}$)")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    points, segments, milieux, longueurs, normales = fonctions.maillage_segments(Npoints, a, forme="cercle")
+    
+    Nleaf_tab = [100, 75, 50, 25, 10, 5]
+    feuille_tab = []
+    profondeur_tab = []
+    
+    for Nleaf in Nleaf_tab:
+        liste_clusters = arbre_fonctions.construction_arbre(Npoints, Nleaf, points,strat="mediane")
+        arbre_fonctions.affichage_diametre_moyen(liste_clusters,"cercle mediane")
+        profondeur_tab.append(arbre_fonctions.hauteur(liste_clusters))
+
+    # Calcul de log2(Npoints) - log2(Nleaf)
+    hauteur_theorique = [np.log2(Npoints) - np.log2(Nleaf) for Nleaf in Nleaf_tab]
+
+    # Tracé du graphique
+    plt.figure(figsize=(8, 5))
+    plt.plot(Nleaf_tab, profondeur_tab, 'o-', label="Profondeur mesurée sur cercle stratégie mediane")
+    plt.plot(
+        Nleaf_tab, 
+        hauteur_theorique, 
+        's--', 
+        label=rf"$\log_2(N_{{\mathrm{{points}}}}) - \log_2(N_{{\mathrm{{leaf}}}})$"
+    )
+
+    plt.xlabel(r"$N_{\mathrm{leaf}}$")
+    plt.ylabel("Hauteur de l'arbre")
+    plt.title(rf"Hauteur de l'arbre en fonction de $N_{{\mathrm{{leaf}}}}$ ($a = {a}$, $N_{{\mathrm{{points}}}} = {Npoints}$)")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+    for Nleaf in Nleaf_tab:
+            liste_clusters = arbre_fonctions.construction_arbre(Npoints, Nleaf, points)
+            feuille_tab.append(arbre_fonctions.nombre_feuilles(liste_clusters))
+    
+    feuille_theorique = [Npoints / Nleaf for Nleaf in Nleaf_tab]
+
+    print("Nleaf_tab :", Nleaf_tab)
+    print("feuille_tab :", feuille_tab)
+    print("feuille_theorique :", feuille_theorique)
+
+    # Tracé du graphique
+    plt.figure(figsize=(8, 5))
+    plt.plot(Nleaf_tab, feuille_tab, 'o-', label="Nombre de feuilles mesuré cercle strat mediane ")
+    plt.plot(
+        Nleaf_tab, 
+        feuille_theorique, 
+        's--', 
+        label=rf"Théorique : $N_{{\mathrm{{points}}}} / N_{{\mathrm{{leaf}}}}$ "
+    )
+
+    plt.xlabel(r"$N_{\mathrm{leaf}}$")
+    plt.ylabel("Nombre de feuilles")
+    plt.title(rf"Nombre de feuilles de l'arbre en fonction de $N_{{\mathrm{{leaf}}}}$ ($a = {a}$, $N_{{\mathrm{{points}}}} = {Npoints}$)")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    points, segments, milieux, longueurs, normales = fonctions.maillage_segments(Npoints, a, forme="etoile")
+    
+    Nleaf_tab = [100, 75, 50, 25, 10, 5]
+    feuille_tab = []
+    profondeur_tab = []
+    
+    for Nleaf in Nleaf_tab:
+        liste_clusters = arbre_fonctions.construction_arbre(Npoints, Nleaf, points,strat="geo")
+        arbre_fonctions.affichage_diametre_moyen(liste_clusters,"etoile geo")
+        profondeur_tab.append(arbre_fonctions.hauteur(liste_clusters))
+
+    # Calcul de log2(Npoints) - log2(Nleaf)
+    hauteur_theorique = [np.log2(Npoints) - np.log2(Nleaf) for Nleaf in Nleaf_tab]
+
+    # Tracé du graphique
+    plt.figure(figsize=(8, 5))
+    plt.plot(Nleaf_tab, profondeur_tab, 'o-', label="Profondeur mesurée sur etoile stratégie géométrique")
+    plt.plot(
+        Nleaf_tab, 
+        hauteur_theorique, 
+        's--', 
+        label=rf"$\log_2(N_{{\mathrm{{points}}}}) - \log_2(N_{{\mathrm{{leaf}}}})$"
+    )
+
+    plt.xlabel(r"$N_{\mathrm{leaf}}$")
+    plt.ylabel("Hauteur de l'arbre")
+    plt.title(rf"Hauteur de l'arbre en fonction de $N_{{\mathrm{{leaf}}}}$ ($a = {a}$, $N_{{\mathrm{{points}}}} = {Npoints}$)")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+    for Nleaf in Nleaf_tab:
+            liste_clusters = arbre_fonctions.construction_arbre(Npoints, Nleaf, points)
+            feuille_tab.append(arbre_fonctions.nombre_feuilles(liste_clusters))
+    
+    feuille_theorique = [Npoints / Nleaf for Nleaf in Nleaf_tab]
+
+    print("Nleaf_tab :", Nleaf_tab)
+    print("feuille_tab :", feuille_tab)
+    print("feuille_theorique :", feuille_theorique)
+
+    # Tracé du graphique
+    plt.figure(figsize=(8, 5))
+    plt.plot(Nleaf_tab, feuille_tab, 'o-', label="Nombre de feuilles mesuré etoile strat géo ")
+    plt.plot(
+        Nleaf_tab, 
+        feuille_theorique, 
+        's--', 
+        label=rf"Théorique : $N_{{\mathrm{{points}}}} / N_{{\mathrm{{leaf}}}}$ "
+    )
+
+    plt.xlabel(r"$N_{\mathrm{leaf}}$")
+    plt.ylabel("Nombre de feuilles")
+    plt.title(rf"Nombre de feuilles de l'arbre en fonction de $N_{{\mathrm{{leaf}}}}$ ($a = {a}$, $N_{{\mathrm{{points}}}} = {Npoints}$)")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+    points, segments, milieux, longueurs, normales = fonctions.maillage_segments(Npoints, a, forme="etoile")
+    
+    Nleaf_tab = [100, 75, 50, 25, 10, 5]
+    feuille_tab = []
+    profondeur_tab = []
+    
+    for Nleaf in Nleaf_tab:
+        liste_clusters = arbre_fonctions.construction_arbre(Npoints, Nleaf, points,strat="mediane")
+        arbre_fonctions.affichage_diametre_moyen(liste_clusters,"etoile mediane")
+        profondeur_tab.append(arbre_fonctions.hauteur(liste_clusters))
+
+    # Calcul de log2(Npoints) - log2(Nleaf)
+    hauteur_theorique = [np.log2(Npoints) - np.log2(Nleaf) for Nleaf in Nleaf_tab]
+
+    # Tracé du graphique
+    plt.figure(figsize=(8, 5))
+    plt.plot(Nleaf_tab, profondeur_tab, 'o-', label="Profondeur mesurée sur etoile stratégie mediane")
+    plt.plot(
+        Nleaf_tab, 
+        hauteur_theorique, 
+        's--', 
+        label=rf"$\log_2(N_{{\mathrm{{points}}}}) - \log_2(N_{{\mathrm{{leaf}}}})$"
+    )
+
+    plt.xlabel(r"$N_{\mathrm{leaf}}$")
+    plt.ylabel("Hauteur de l'arbre")
+    plt.title(rf"Hauteur de l'arbre en fonction de $N_{{\mathrm{{leaf}}}}$ ($a = {a}$, $N_{{\mathrm{{points}}}} = {Npoints}$)")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+    for Nleaf in Nleaf_tab:
+            liste_clusters = arbre_fonctions.construction_arbre(Npoints, Nleaf, points)
+            feuille_tab.append(arbre_fonctions.nombre_feuilles(liste_clusters))
+    
+    feuille_theorique = [Npoints / Nleaf for Nleaf in Nleaf_tab]
+
+    print("Nleaf_tab :", Nleaf_tab)
+    print("feuille_tab :", feuille_tab)
+    print("feuille_theorique :", feuille_theorique)
+
+    # Tracé du graphique
+    plt.figure(figsize=(8, 5))
+    plt.plot(Nleaf_tab, feuille_tab, 'o-', label="Nombre de feuilles mesuré etoile strat mediane ")
+    plt.plot(
+        Nleaf_tab, 
+        feuille_theorique, 
+        's--', 
+        label=rf"Théorique : $N_{{\mathrm{{points}}}} / N_{{\mathrm{{leaf}}}}$ "
+    )
+
+    plt.xlabel(r"$N_{\mathrm{leaf}}$")
+    plt.ylabel("Nombre de feuilles")
+    plt.title(rf"Nombre de feuilles de l'arbre en fonction de $N_{{\mathrm{{leaf}}}}$ ($a = {a}$, $N_{{\mathrm{{points}}}} = {Npoints}$)")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+

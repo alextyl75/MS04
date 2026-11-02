@@ -7,13 +7,14 @@ from matplotlib.lines import Line2D
 #================== CLASS NOEUD =============
 
 class Noeud:
-    def __init__(self, box : list, list_pts : list, niveau : int, indice_local : int, fils1 : "Noeud" = None, fils2 : "Noeud" = None):
+    def __init__(self, box : list, list_pts : list, niveau : int, indice_local : int, fils1 : "Noeud" = None, fils2 : "Noeud" = None, diam : float = 0.):
         self.box = box
         self.list_pts = list_pts
         self.niveau = niveau
         self.indice_local = indice_local
         self.fils1 = fils1
         self.fils2 = fils2
+        self.diam = diam
         return 
 
     @property
@@ -28,8 +29,21 @@ class Noeud:
 
 #================== ARBRE =============
 
-def construction_arbre(Npoints, Nleaf, points):
+def construction_arbre(Npoints, Nleaf, points,strat = "geo"):
+    """Renvoie l'arbre sous forme d'une liste de noeud
+    """
+    def calculer_box_et_diam(pts_indexed):     
+        # Calcule la boîte resserrée (Q6) et son diamètre autour d'une liste de (idx, point)
+        x_coords = [pt[1][0] for pt in pts_indexed]
+        y_coords = [pt[1][1] for pt in pts_indexed]
+        
+        x_min, x_max = min(x_coords), max(x_coords)
+        y_min, y_max = min(y_coords), max(y_coords)
 
+        box = [[x_min, y_min], [x_min, y_max], [x_max, y_min], [x_max, y_max]]
+        diam = float(np.sqrt((x_max - x_min)**2 + (y_max - y_min)**2))
+        return box, diam
+    
     def box_initial(pts_indexed):     
         # initialisation avec le premier point de la liste
         x_min = x_max = pts_indexed[0][1][0]
@@ -60,34 +74,66 @@ def construction_arbre(Npoints, Nleaf, points):
 
             list_pts1, list_pts2 = [], []
 
-            if Lx >= Ly: #on decoupe selon y
-                #fils 1: xmin xmax/2
-                #fils 2 : xmax/2 xmax
-                #rien ne change selon y
-                for pts in noeud.list_pts:
-                    xmid = (xmax+xmin)/2
-                    if pts[1][0] <= xmid:
-                        list_pts1.append(pts)
-                    else:
-                        list_pts2.append(pts)
+            if strat=="geo":
+                ###########SI DECOUPE GEOMETRIQUE (avant question 6)
+                
+                if Lx >= Ly: #on decoupe selon y
+                    #fils 1: xmin xmax/2
+                    #fils 2 : xmax/2 xmax
+                    #rien ne change selon y
+                    for pts in noeud.list_pts:
+                        xmid = (xmax+xmin)/2
+                        if pts[1][0] <= xmid:
+                            list_pts1.append(pts)
+                        else:
+                            list_pts2.append(pts)
 
-                # creation des points de la boîte
-                box_1 = [(xmin, ymin), (xmid, ymin), (xmid, ymax), (xmin, ymax)]
-                box_2 = [(xmid, ymin), (xmax, ymin), (xmax, ymax), (xmid, ymax)]
+                    # # creation des points de la boîte
+                    # box_1 = [(xmin, ymin), (xmid, ymin), (xmid, ymax), (xmin, ymax)]
+                    # box_2 = [(xmid, ymin), (xmax, ymin), (xmax, ymax), (xmid, ymax)]
+                    # diam_1 = float(np.sqrt((xmid - xmin)**2 + (ymax - ymin)**2))
+                    # diam_2 = float(np.sqrt((xmax - xmid)**2 + (ymax - ymin)**2))
 
-            else:
-                for pts in noeud.list_pts:
-                    ymid = (ymax+ymin)/2
-                    if pts[1][1] <= ymid:
-                        list_pts1.append(pts)
-                    else:
-                        list_pts2.append(pts)
+                    box_1, diam_1 = calculer_box_et_diam(list_pts1)
+                    box_2, diam_2 = calculer_box_et_diam(list_pts2)
 
-                box_1 = [(xmin, ymin), (xmax, ymin), (xmax, ymid), (xmin, ymid)]
-                box_2 = [(xmin, ymid), (xmax, ymid), (xmax, ymax), (xmin, ymax)]
 
-            fils1 = Noeud(box_1, list_pts1, niveau=noeud.niveau+1, indice_local=0)
-            fils2 = Noeud(box_2, list_pts2, niveau=noeud.niveau+1, indice_local=1)
+                else:
+                    for pts in noeud.list_pts:
+                        ymid = (ymax+ymin)/2
+                        if pts[1][1] <= ymid:
+                            list_pts1.append(pts)
+                        else:
+                            list_pts2.append(pts)
+
+                    # box_1 = [(xmin, ymin), (xmax, ymin), (xmax, ymid), (xmin, ymid)]
+                    # box_2 = [(xmin, ymid), (xmax, ymid), (xmax, ymax), (xmin, ymax)]
+                    # diam_1 = float(np.sqrt((xmax - xmin)**2 + (ymid - ymin)**2))
+                    # diam_2 = float(np.sqrt((xmax - xmax)**2 + (ymax - ymid)**2))
+
+                    box_1, diam_1 = calculer_box_et_diam(list_pts1)
+                    box_2, diam_2 = calculer_box_et_diam(list_pts2)
+            if strat=="mediane":
+            ############SI DECOUPE MEDIANE (question 6 et suivant)
+                if Lx >= Ly: #on decoupe selon y
+                    alpha = 0
+                else:
+                    alpha = 1
+                # 1. On trie directement les éléments (idx, coords) selon la coordonnée alpha (pt[1][alpha])
+                pts_tries = sorted(noeud.list_pts, key=lambda pt: pt[1][alpha])
+
+                # 2. On coupe la liste triée en deux moitiés égales (médiane)
+                mid = len(pts_tries) // 2
+                list_pts1 = pts_tries[:mid]
+                list_pts2 = pts_tries[mid:]
+
+                # 3. Calcul des nouvelles boîtes englobantes resserrées et de leurs diamètres (Q6)
+                box_1, diam_1 = calculer_box_et_diam(list_pts1)
+                box_2, diam_2 = calculer_box_et_diam(list_pts2)
+        ##################### -----####################------------------------------------------------------
+
+            fils1 = Noeud(box_1, list_pts1, niveau=noeud.niveau+1, indice_local=0,diam = diam_1)
+            fils2 = Noeud(box_2, list_pts2, niveau=noeud.niveau+1, indice_local=1, diam =diam_2)
 
             noeud.fils1 = fils1
             noeud.fils2 = fils2
@@ -462,6 +508,33 @@ def nombre_feuilles(arbre):
     return exploration(arbre[0])   
 
 
+def distance_box(Noeud1,Noeud2):
+    x1_min = min(p[0] for p in Noeud1.box)
+    x1_max = max(p[0] for p in Noeud1.box)
+    y1_min = min(p[1] for p in Noeud1.box)
+    y1_max = max(p[1] for p in Noeud1.box)
+
+    x2_min = min(p[0] for p in Noeud2.box)
+    x2_max = max(p[0] for p in Noeud2.box)
+    y2_min = min(p[1] for p in Noeud2.box)
+    y2_max = max(p[1] for p in Noeud2.box)
     
+    delta_x = max(0., x1_min - x2_max, x2_min - x1_max)
+    delta_y = max(0.,y1_min - y2_max, y2_min - y1_max)
+
+    return np.sqrt(delta_x**2 + delta_y**2)
+
+
+
+def affichage_diametre_moyen(arbre,titre):
+    diam = 0.
+    nb = 0
+    for noeud in arbre:
+        if noeud.is_leaf:
+            diam += noeud.diam
+            nb += 1
+    print(titre,diam/nb)
+
+
 
 
