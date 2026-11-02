@@ -7,7 +7,7 @@ test_affichage_terminal = False
 test_affichage_plt = False
 test_q3 = False
 test_q4 = False
-test_q5_hauteur = False
+test_q5_hauteur = True
 test_q5_feuille = False
 test_q7 = True
 
