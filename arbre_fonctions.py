@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.lines import Line2D
+from typing import List, Optional
 
 #================== CLASS NOEUD =============
 
@@ -145,7 +146,11 @@ def construction_arbre(Npoints, Nleaf, points,strat = "geo"):
     # Conversion initiale des points au format (idx, coordonnees)
     points_indexed = [(i, pt) for i, pt in enumerate(points)]
     box, diam = calculer_box_et_diam(points_indexed)
+<<<<<<< HEAD
     racine = Noeud(box, points_indexed, niveau=0, indice_local=0,diam=diam)
+=======
+    racine = Noeud(box, points_indexed, niveau=0, indice_local=0, diam=diam)
+>>>>>>> e5670398acf5c46a8708e2416c9c4390a1df30e2
     iteration(racine)
 
     return cluster
@@ -508,6 +513,7 @@ def nombre_feuilles(arbre):
 
     return exploration(arbre[0])   
 
+# TP5 question 1
 
 def distance_box(Noeud1,Noeud2):
     x1_min = min(p[0] for p in Noeud1.box)
@@ -525,8 +531,6 @@ def distance_box(Noeud1,Noeud2):
 
     return np.sqrt(delta_x**2 + delta_y**2)
 
-
-
 def affichage_diametre_moyen(arbre,titre):
     diam = 0.
     nb = 0
@@ -541,5 +545,95 @@ def is_admissible(noeudX, noeudY, eta):
     return min(noeudX.diam,noeudY.diam)<= eta * distance_box(noeudX,noeudY)
 
 
+# Question 2 TP5
 
+class Noeud_bloc:
+    def __init__(self, tau : Noeud, sigma : Noeud, niveau : int, indice_local : int, fils_list : Optional[List['Noeud_bloc']] = None, type_feuille : str = None):
+        self.tau = tau
+        self.sigma = sigma
+        self.niveau = niveau
+        self.indice_local = indice_local
+        self.fils_list = fils_list
+        self.type_feuille = type_feuille
+        return
+        
+    @property
+    def is_leaf(self):
+        """Retourne True si le nœud est une feuille."""
+        return self.fils_list is None or len(self.fils_list) == 0
 
+    def diviser(self):
+            """Crée les sous-blocs d'interaction enfants valides."""
+            enfants_tau = [f for f in (self.tau.fils1, self.tau.fils2) if f is not None]
+            enfants_sigma = [f for f in (self.sigma.fils1, self.sigma.fils2) if f is not None]
+    
+            self.fils_list = [
+                Noeud_bloc(
+                    tau=child_tau,
+                    sigma=child_sigma,
+                    niveau=self.niveau + 1,
+                    indice_local=i
+                )
+                for i, (child_tau, child_sigma) in enumerate(
+                    (t, s) for t in enfants_tau for s in enfants_sigma
+                )
+            ]
+
+def arbre_bloc_construction(arbre_cluster, eta):
+    arbre_bloc = []
+
+    def iteration(Noeud_bloc):
+        arbre_bloc.append(Noeud_bloc)
+        
+        if is_admissible(Noeud_bloc.tau, Noeud_bloc.sigma, eta): 
+            Noeud_bloc.type_feuille="feuille_admissible"
+        elif Noeud_bloc.tau.is_leaf or Noeud_bloc.sigma.is_leaf:
+            Noeud_bloc.type_feuille="feuille_dense"
+        else:      
+            Noeud_bloc.diviser()
+            for fils in Noeud_bloc.fils_list:
+                iteration(fils)
+
+    print(arbre_cluster[0].diam)
+    racine_cluster = arbre_cluster[0] if isinstance(arbre_cluster, (list, tuple)) else arbre_cluster
+    iteration(Noeud_bloc(racine_cluster, racine_cluster, 0, 0))
+    return arbre_bloc
+
+def afficher_arbre_bloc(noeud, prefixe="", est_dernier=True):
+    """
+    Affiche la structure hiérarchique d'un arbre de blocs (Block Cluster Tree)
+    avec le type de feuille dans la console.
+    """
+    if noeud is None:
+        return
+
+    # Déterminer le connecteur d'arborescence
+    connecteur = "" if prefixe == "" else ("└── " if est_dernier else "├── ")
+
+    # Récupération du type de feuille / nœud
+    type_bloc = getattr(noeud, "type_feuille", "noeud_interne") or "noeud_interne"
+
+    # Mise en forme du libellé selon le type
+    if type_bloc == "feuille_admissible":
+        libelle = "[Admissible] (Compression ACA / Far-field)"
+    elif type_bloc == "feuille_dense":
+        libelle = "[Dense] (Near-field / Direct)"
+    else:
+        libelle = "[Noeud interne]"
+
+    # Affichage de la ligne du nœud courant
+    print(
+        f"{prefixe}{connecteur}{libelle} | Niv {noeud.niveau} | Bloc {noeud.indice_local}"
+    )
+
+    # Préparation du préfixe pour les enfants
+    extension = "    " if est_dernier else "│   "
+    nouveau_prefixe = prefixe + (extension if prefixe != "" else "")
+
+    # Parcourir les enfants s'ils existent (fils_list)
+    fils_list = getattr(noeud, "fils_list", None)
+    if fils_list:
+        total_fils = len(fils_list)
+        for i, fils in enumerate(fils_list):
+            est_dernier_fils = (i == total_fils - 1)
+            afficher_arbre_bloc(fils, nouveau_prefixe, est_dernier=est_dernier_fils)
