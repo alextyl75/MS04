@@ -204,20 +204,6 @@ if test_q7:
     plt.legend()
     plt.show()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     points, segments, milieux, longueurs, normales = fonctions.maillage_segments(Npoints, a, forme="cercle")
     
     Nleaf_tab = [100, 75, 50, 25, 10, 5]
@@ -276,29 +262,6 @@ if test_q7:
     plt.legend()
     plt.show()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     points, segments, milieux, longueurs, normales = fonctions.maillage_segments(Npoints, a, forme="etoile")
     
     Nleaf_tab = [100, 75, 50, 25, 10, 5]
@@ -356,15 +319,6 @@ if test_q7:
     plt.grid(True)
     plt.legend()
     plt.show()
-
-
-
-
-
-
-
-
-
 
     points, segments, milieux, longueurs, normales = fonctions.maillage_segments(Npoints, a, forme="etoile")
     

@@ -28,11 +28,10 @@ if testq1:
     print(arbre_fonctions.distance_box(noeud1,noeud2))
     print(arbre_fonctions.is_admissible(noeud1,noeud2,eta = 2.))
 
-
-
 if testq2:
     arbre_bloc = arbre_fonctions.arbre_bloc_construction(arbre_cluster, ETA)
     arbre_fonctions.afficher_arbre_bloc(arbre_bloc[0])
+    arbre_fonctions.arbre_bloc_partition(arbre_bloc[0], Npoints)
 
 # if testq3:
 #     a = 1
@@ -133,3 +132,4 @@ if testq3:
     
             
 
+    
