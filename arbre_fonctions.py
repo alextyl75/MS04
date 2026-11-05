@@ -30,7 +30,7 @@ class Noeud:
 
 #================== ARBRE =============
 
-def construction_arbre(Npoints, Nleaf, points,strat = "geo"):
+def construction_arbre(Npoints, Nleaf, points,strat):
     """Renvoie l'arbre sous forme d'une liste de noeud
     """
     def calculer_box_et_diam(pts_indexed):     
@@ -114,6 +114,7 @@ def construction_arbre(Npoints, Nleaf, points,strat = "geo"):
 
                     box_1, diam_1 = calculer_box_et_diam(list_pts1)
                     box_2, diam_2 = calculer_box_et_diam(list_pts2)
+
             if strat=="mediane":
             ############SI DECOUPE MEDIANE (question 6 et suivant)
                 if Lx >= Ly: #on decoupe selon y

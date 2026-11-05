@@ -6,12 +6,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-testq1 = True
-testq2 = True
-testq3 = True
+testq1 = False
+testq2 = False
+testq3 = False
+
+graphe_q3_rapport = True
 
 # Parametres
-Npoints = 200
+Npoints = 100
 a = 1
 Nleaf = 5
 
@@ -19,7 +21,8 @@ ETA = 3
 
 # Generation du maillage
 points,segments,milieux,longueurs,normales = fonctions.maillage_segments(Npoints, a, forme="cercle")
-arbre_cluster = arbre_fonctions.construction_arbre(Npoints, Nleaf, points)
+arbre_cluster = arbre_fonctions.construction_arbre(Npoints, Nleaf, points, strat="mediane")
+arbre_bloc = arbre_fonctions.arbre_bloc_construction(arbre_cluster, ETA)
 
 if testq1:
     delta = 0.49
@@ -63,7 +66,28 @@ if testq3:
 
     afficher_arbre_fonctions.visualise_H_matrice(arbre_bloc, arbre_cluster, Npoints, eta)
 
-    
+if graphe_q3_rapport:
+    a = 1
+    k = 5
+    Npoints = 1000
+    Nleaf = 5
+    eta = 2.0
+
+    points,segments,milieux,longueurs,normales = fonctions.maillage_segments(Npoints, a, forme="cercle")
+    arbre_cluster = arbre_fonctions.construction_arbre(Npoints, Nleaf, points, strat="mediane")
+
+    # 1. Vos 6 valeurs de eta à tester
+    eta_values = [0.2, 0.5, 1.0, 2, 3.0, 4.0]
+
+    afficher_arbre_fonctions.visualise_H_matrice_6_eta(
+        creer_arbre_bloc_func=lambda e: arbre_fonctions.arbre_bloc_construction(arbre_cluster, e),
+        arbre_cluster=arbre_cluster,
+        Npoints=Npoints,
+        eta_list=eta_values
+    )
+
+
+
             
 
     

@@ -293,3 +293,88 @@ def visualise_H_matrice(arbre_bloc, arbre_cluster, Npoints, eta):
 
     plt.tight_layout()
     plt.show()
+
+def visualise_H_matrice_6_eta(creer_arbre_bloc_func, arbre_cluster, Npoints, eta_list):
+    """
+    Affiche la structure de la H-matrice pour 6 valeurs de eta différentes 
+    sur une seule et même figure Matplotlib (grille 2x3).
+
+    Paramètres :
+    ------------
+    - creer_arbre_bloc_func : fonction/lambda qui prend eta en argument et renvoie l'arbre de blocs.
+                              Exemple: lambda e: construire_arbre_bloc(arbre_cluster, e)
+    - arbre_cluster         : l'arbre de clusters parent
+    - Npoints               : nombre total de points
+    - eta_list              : liste de 6 valeurs de eta (ex: [0.1, 0.5, 1.0, 1.5, 2.0, 3.0])
+    """
+    if len(eta_list) != 6:
+        raise ValueError("La liste 'eta_list' doit contenir exactement 6 valeurs de eta.")
+
+    # 1. Calcul de la permutation d'indices une seule fois
+    perm = test_arbre_fonctions.permutation_indice(arbre_cluster)
+    perm_inv = {ancien_id: nouvel_id for nouvel_id, ancien_id in enumerate(perm)}
+
+    # 2. Création de la figure globale 2x3
+    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+    axes = axes.flatten()  # Conversion de la grille 2D en liste 1D pour itérer facilement
+
+    for idx, eta in enumerate(eta_list):
+        ax = axes[idx]
+        
+        # Génération de l'arbre de blocs pour la valeur actuelle de eta
+        arbre_bloc = creer_arbre_bloc_func(eta)
+
+        nb_admissibles = 0
+        nb_denses = 0
+
+        # Parcours des nœuds de l'arbre
+        for noeud_bloc in arbre_bloc:
+            if noeud_bloc.type_feuille in ("feuille_admissible", "feuille_dense"):
+                
+                # Conversion des indices avec la permutation
+                idx_tau = [perm_inv[pt[0]] for pt in noeud_bloc.tau.list_pts]
+                idx_sigma = [perm_inv[pt[0]] for pt in noeud_bloc.sigma.list_pts]
+
+                i_min, i_max = min(idx_tau), max(idx_tau)
+                j_min, j_max = min(idx_sigma), max(idx_sigma)
+
+                largeur = j_max - j_min + 1
+                hauteur = i_max - i_min + 1
+
+                if noeud_bloc.type_feuille == "feuille_admissible":
+                    couleur_fond = "#4ade80"   # Vert
+                    nb_admissibles += 1
+                elif noeud_bloc.type_feuille == "feuille_dense":
+                    couleur_fond = "#f87171"   # Rouge
+                    nb_denses += 1
+
+                # Ajout du pavé rectangulaire
+                rect = patches.Rectangle(
+                    (j_min, i_min), largeur, hauteur,
+                    linewidth=0.5, edgecolor="black", facecolor=couleur_fond, alpha=0.85
+                )
+                ax.add_patch(rect)
+
+        # Configuration des axes pour chaque sous-figure
+        ax.set_xlim(0, Npoints)
+        ax.set_ylim(Npoints, 0)  # Origine (0,0) en haut à gauche
+        ax.set_aspect('equal')
+        ax.xaxis.tick_top()
+        ax.xaxis.set_label_position('top')
+        
+        ax.set_title(
+            f"$\eta = {eta}$\n"
+            f"Admissibles: {nb_admissibles} | Denses: {nb_denses}",
+            fontsize=11, fontweight="bold", pad=10
+        )
+
+    # Légende globale en bas de la figure pour ne pas charger les 6 sous-graphiques
+    legend_elements = [
+        patches.Patch(facecolor="#4ade80", edgecolor="black", label="Bloc admissible (compressible - Vert)"),
+        patches.Patch(facecolor="#f87171", edgecolor="black", label="Bloc dense (non admissible - Rouge)")
+    ]
+    fig.legend(handles=legend_elements, loc="lower center", ncol=2, fontsize=12, bbox_to_anchor=(0.5, -0.02))
+
+    plt.suptitle(f"Structure de la $\mathcal{{H}}$-matrice selon $\eta$ ($N = {Npoints}$)", fontsize=16, fontweight="bold", y=0.98)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
