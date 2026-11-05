@@ -104,51 +104,49 @@ def test_permutation(arbre, points_maillage):
 
 def verification_indices_consecutifs(arbre, points_maillage):
     if test_permutation(arbre, points_maillage):
-        # Utilisation des indices d'origine réels (0 à N-1) pour tester la vraie consécutivité géométrique
-        sigma_inv_dict = {i: i for i in range(len(points_maillage))}
+        sigma = permutation_indice(arbre)
+
+        # Création du dictionnaire inverse 
+        sigma_inv_dict = {ancien_id: nouvel_id for nouvel_id, ancien_id in enumerate(sigma)}
+        print("sigma_inv_dict", sigma_inv_dict  )
 
         def test_index(noeud):
-            # Récupération des identifiants d'origine dans la feuille
-            sigma_inv_tab = [sigma_inv_dict[pt[0]] for pt in noeud.list_pts]
+            # Nouveaux indices attribués par sigma à cette feuille
+            sigma_inv_tab = [sigma_inv_dict[id] for id, _ in noeud.list_pts]
 
+            # Sécurité si la feuille ne contient aucun point
             if len(sigma_inv_tab) == 0:
                 return True
 
-            sigma_inv_tab_trie = sorted(sigma_inv_tab)
-            min_idx, max_idx = sigma_inv_tab_trie[0], sigma_inv_tab_trie[-1]
-
-            # 1. Vérification de la taille de la plage
-            if len(sigma_inv_tab) != (max_idx - min_idx + 1):
-                print(f"[ERREUR] Trou dans la feuille contenant les points d'origine: {sigma_inv_tab_trie}")
+            # Test de la taille de la plage 
+            if len(sigma_inv_tab) != (max(sigma_inv_tab) - min(sigma_inv_tab) + 1):
+                print(f"Mauvaise longueur sur la feuille : {len(sigma_inv_tab)} pts vs plage [{min(sigma_inv_tab)}, {max(sigma_inv_tab)}]")
                 return False
-
-            # 2. Vérification élément par élément
+            
+            # Test : trier et vérifier qu'il n'y a aucun trou
+            sigma_inv_tab_trie = sorted(sigma_inv_tab)
             for i in range(len(sigma_inv_tab_trie) - 1):
                 if sigma_inv_tab_trie[i] + 1 != sigma_inv_tab_trie[i+1]:
-                    print(f"[ERREUR] Discontinuité décelée entre {sigma_inv_tab_trie[i]} et {sigma_inv_tab_trie[i+1]}")
+                    print("Trou détecté dans la suite des nouveaux indices !")
                     return False
-
+                
             return True
-
+       
         def parcourt(noeud):
             if noeud is None:
                 return True
             if noeud.is_leaf:
                 return test_index(noeud)
             else:
-                if hasattr(noeud, 'fils_list') and noeud.fils_list:
-                    return all(parcourt(fils) for fils in noeud.fils_list)
-                else:
-                    return parcourt(getattr(noeud, 'fils1', None)) and parcourt(getattr(noeud, 'fils2', None))
+                # Propage le résultat booléen des deux fils
+                return parcourt(noeud.fils1) and parcourt(noeud.fils2)
 
+        # Récupération de la racine 
         racine = arbre[0] if isinstance(arbre, list) else arbre
+        
         valide = parcourt(racine)
-
         if valide:
-            print("Succès : Tous les clusters contiennent des indices consécutifs !")
-        else:
-            print("Échec : La géométrie ou la permutation a séparé des indices consécutifs (ex: 0 et 99 réorganisés).")
-
+            print("Tous les clusters contiennent des indices consécutifs dans la nouvelle numérotation !")
         return valide
 
     return False
