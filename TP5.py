@@ -50,9 +50,9 @@ if testq2:
 if testq3:
     a = 1
     k = 5
-    Npoints = 100
+    Npoints = 200
     Nleaf = 5
-    eta = 2.0
+    eta = 5.0
 
     points, segments, milieux, longueurs, normales = fonctions.maillage_segments(Npoints, a, forme="etoile")
     A = fonctions.A_assemble(points=points, segments=segments, nq=5, nq_tilde=5, N=Npoints, k=k)
@@ -77,6 +77,7 @@ if testq3:
             if noeud_bloc.type_feuille in ("feuille_admissible", "feuille_dense"):
                 
                 # Nouveaux indices (consécutifs) pour les lignes (tau) et colonnes (sigma)
+                print(noeud_bloc.tau.list_pts[0],noeud_bloc.tau.list_pts[0][0])
                 idx_tau = [perm_inv[pt[0]] for pt in noeud_bloc.tau.list_pts]
                 idx_sigma = [perm_inv[pt[0]] for pt in noeud_bloc.sigma.list_pts]
 

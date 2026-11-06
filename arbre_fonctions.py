@@ -114,6 +114,7 @@ def construction_arbre(Npoints, Nleaf, points,strat = "geo"):
 
                     box_1, diam_1 = calculer_box_et_diam(list_pts1)
                     box_2, diam_2 = calculer_box_et_diam(list_pts2)
+                    
             if strat=="mediane":
             ############SI DECOUPE MEDIANE (question 6 et suivant)
                 if Lx >= Ly: #on decoupe selon y

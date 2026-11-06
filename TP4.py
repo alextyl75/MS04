@@ -5,24 +5,24 @@ import matplotlib.pyplot as plt
 
 test_affichage_terminal = False
 test_affichage_plt = False
-test_q3 = False
+test_q3 = True
 test_q4 = False
-test_q5_hauteur = True
+test_q5_hauteur = False
 test_q5_feuille = False
-test_q7 = True
+test_q7 = False
 
 # Parametres
-Npoints = 200
+Npoints = 300
 a = 1
 Nleaf = 5
 
 # Generation du maillage
-points,segments,milieux,longueurs,normales = fonctions.maillage_segments(Npoints, a, forme="cercle")
+points,segments,milieux,longueurs,normales = fonctions.maillage_segments(Npoints, a, forme="etoile")
     
 # Construction de l'arbre de clusters
 
 # Question 1 et 2
-liste_clusters = arbre_fonctions.construction_arbre(Npoints, Nleaf, points)
+liste_clusters = arbre_fonctions.construction_arbre(Npoints, Nleaf, points,strat="mediane")
 noeud_racine = liste_clusters[0]
 
 # Affichage textuel dans le terminal
