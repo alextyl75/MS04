@@ -290,3 +290,101 @@ def arbre_bloc_partition(racine_bloc: Noeud_bloc, Npoints: int) -> bool:
     else:
         print(f"Partition valide : {len(feuilles_parcourues)} feuilles couvrent exactement {total_couples} couples ({Npoints}x{Npoints}).")
         return True 
+
+
+def H_matrice_gain_memoire(A_full, arbre_bloc, aca_function, tol):
+    N_h = 0
+
+    def parcourt(Noeud_bloc):
+        nonlocal N_h
+
+        if Noeud_bloc.is_leaf:
+            tau = Noeud_bloc.tau
+            sigma = Noeud_bloc.sigma
+            
+            if Noeud_bloc.type_feuille == "feuille_admissible":
+                idx_tau = [p[0] for p in tau.list_pts]
+                idx_sigma = [p[0] for p in sigma.list_pts] 
+                A_ij = A_full[np.ix_(idx_tau, idx_sigma)]
+
+                _, _, r = aca_function(A_ij, tol)
+                N_h += r * (len(sigma.list_pts) + len(tau.list_pts))
+
+            else: 
+                N_h += len(sigma.list_pts) * len(tau.list_pts)
+        else:
+            for fils in Noeud_bloc.fils_list:
+                parcourt(fils)
+
+    parcourt(arbre_bloc[0])
+
+    return N_h
+
+
+def H_matrix(A_full, arbre_bloc, aca_function, tol):
+    """Construit la H-matrice sous forme de dictionnaire.
+    Clé   : Tuple (tuple(idx_tau), tuple(idx_sigma))
+    Valeur: - (U, V) pour un bloc admissible (matrices NumPy de rang faible)
+            - A_ij   pour un bloc dense
+    """
+    H = {}
+
+    def parcourt(Noeud_bloc):
+        nonlocal H
+
+        if Noeud_bloc.is_leaf:
+            tau = Noeud_bloc.tau
+            sigma = Noeud_bloc.sigma
+
+            # Extraction des indices
+            idx_tau = [p[0] for p in tau.list_pts]
+            idx_sigma = [p[0] for p in sigma.list_pts]
+
+            # Clé unique pour le dictionnaire
+            cle = (tuple(idx_tau), tuple(idx_sigma))
+            A_ij = A_full[np.ix_(idx_tau, idx_sigma)]
+
+            if Noeud_bloc.type_feuille == "feuille_admissible":
+                u_list, v_list, r = aca_function(A_ij, tol)
+
+                if r > 0:
+                    U = np.column_stack(u_list)
+                    V = np.column_stack(v_list)
+                else:
+                    U = np.zeros((len(idx_tau), 0), dtype=complex)
+                    V = np.zeros((len(idx_sigma), 0), dtype=complex)
+
+                H[cle] = (U, V)
+
+            elif Noeud_bloc.type_feuille == "feuille_dense":
+                H[cle] = A_ij
+
+        else:
+            for fils in Noeud_bloc.fils_list:
+                parcourt(fils)
+
+    racine = arbre_bloc[0] if isinstance(arbre_bloc, list) else arbre_bloc
+    parcourt(racine)
+
+    return H
+
+def H_matrix_assemblage(H, Npoints):
+    """
+    Reconstitue la matrice dense H (Npoints x Npoints) à partir du dictionnaire H.
+    """
+    H_assemble = np.zeros((Npoints, Npoints), dtype=complex)
+
+    for (idx_tau, idx_sigma), contenu in H.items():
+        indices = np.ix_(idx_tau, idx_sigma)
+        
+        if isinstance(contenu, tuple):
+            # Bloc admissible : contenu = (U, V)
+            U, V = contenu            
+            H_assemble[indices] = U @ V.T
+        else:
+            # Bloc dense : contenu = A_ij
+            H_assemble[indices] = contenu
+
+    return H_assemble
+
+

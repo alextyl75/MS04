@@ -283,6 +283,61 @@ def A_assemble(points, segments, nq, nq_tilde, N, k):
 
     return A
 
+def ACA_complet_tolerance(A, tol, k_max=None):
+    """
+    Factorisation ACA avec pivotage complet et tolérance adaptative.
+    """
+    n, m = A.shape
+    if k_max is None:
+        k_max = min(n, m)
+
+    R = A.copy().astype(complex)
+    u_list = []
+    v_list = []
+
+    norm_A_approx_sq = 0.0  # Frobenius
+
+    for k in range(1, k_max + 1):
+        # Recherche du pivot maximal (Pivotage complet)
+        i_star, j_star = np.unravel_index(np.argmax(np.abs(R)), R.shape)
+        pivot = R[i_star, j_star]
+
+        # Si le résidu restant est nul, on s'arrête
+        if np.abs(pivot) < 1e-15:
+            break
+
+        # Extraire la colonne et la ligne de résidus
+        u_k = R[:, j_star] / pivot
+        v_k_trans = R[i_star, :]
+
+        # Mise à jour du résidu
+        outer_uv = np.outer(u_k, v_k_trans)
+        R = R - outer_uv
+
+        u_list.append(u_k)
+        v_list.append(v_k_trans)
+
+        # Calcul des normes pour le critère d'arrêt
+        norm_u = np.linalg.norm(u_k)
+        norm_v = np.linalg.norm(v_k_trans)
+        norm_uv = norm_u * norm_v  # Norme de la nouvelle contribution
+
+        # Mise à jour de l'estimation de la norme de Frobenius de A_approx
+        norm_A_approx_sq += norm_uv**2
+        for l in range(k - 1):
+            prod_u = np.vdot(u_list[l], u_k)
+            prod_v = np.vdot(v_list[l], v_k_trans)
+            norm_A_approx_sq += 2 * np.real(prod_u * prod_v)
+
+        norm_A_approx = np.sqrt(max(0.0, norm_A_approx_sq))
+
+        # --- CRITÈRE D'ARRÊT ADAPTATIF ---
+        if norm_uv <= tol * norm_A_approx:
+            break
+
+    rang_obtenu = len(u_list)
+
+    return u_list, v_list, rang_obtenu
 
 def ACA_partiel(A, N, epsilon, verbose=False):
     """
@@ -367,4 +422,6 @@ def reconstruire_ACA_partiel(u_k_used, v_k_used, N=None):
     for u, v in zip(u_k_used, v_k_used):
         A_approx += np.outer(u, v)
     return A_approx
+
+
 
