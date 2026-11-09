@@ -9,8 +9,10 @@ import matplotlib.patches as patches
 testq1 = False
 testq2 = False
 testq3 = False
+graphe_q3_rapport = False
+testq4 = True
 
-graphe_q3_rapport = True
+
 
 # Parametres
 Npoints = 100
@@ -71,7 +73,7 @@ if graphe_q3_rapport:
     k = 5
     Npoints = 1000
     Nleaf = 5
-    eta = 2.0
+    eta = 3.0
 
     points,segments,milieux,longueurs,normales = fonctions.maillage_segments(Npoints, a, forme="cercle")
     arbre_cluster = arbre_fonctions.construction_arbre(Npoints, Nleaf, points, strat="mediane")
@@ -94,8 +96,48 @@ if graphe_q3_rapport:
         eta_list=eta_values
     )
 
+######Question 4
 
+if testq4:
+    a = 1
+    k = 5
+    Npoints = 700
+    Nleaf = 15
+    eta = 3.0
 
+    points, segments, milieux, longueurs, normales = fonctions.maillage_segments(Npoints, a, forme="etoile")
+    A_bem = fonctions.A_assemble(points=points, segments=segments, nq=5, nq_tilde=5, N=Npoints, k=k)
+    print("pass")
+    arbre_cluster = arbre_fonctions.construction_arbre(Npoints, Nleaf, points, strat="mediane")
+    arbre_bloc = arbre_fonctions.arbre_bloc_construction(arbre_cluster, eta)
+    
+    afficher_arbre_fonctions.visualise_H_matrice(arbre_bloc, arbre_cluster, Npoints, eta)
+        # Exemple 1 : Comparaison stricte à taille égale (autour de la taille des feuilles Nleaf)
+    # Idéal pour répondre à "Comparer avec des blocs non admissibles de tailles comparables" (4b)
+    afficher_arbre_fonctions.analyser_question_4(
+        A=A_bem,                  # Votre matrice BEM pleine (NxN)
+        arbre_bloc=arbre_bloc,    # Votre liste renvoyée par arbre_bloc_construction
+        eps=1e-6,                 # Tolérance affichée sur le graphique
+        liste_eps_tableau=[1e-3, 1e-6, 1e-9],
+        nb_admissibles=3,
+        nb_denses=3,
+        taille_min=10,
+        taille_max=40,            # Force à ne regarder que des blocs de taille similaire aux feuilles denses
+        forcer_meme_taille=True
+    )
+
+    # Exemple 2 : Voir le rang sur de très grands blocs admissibles (ex: 60x60 à 250x250)
+    # Idéal pour montrer en 4(c) que même un bloc 250x250 a un rang r_eps ~ 5 à 10 !
+    afficher_arbre_fonctions.analyser_question_4(
+        A=A_bem,
+        arbre_bloc=arbre_bloc,
+        eps=1e-6,
+        nb_admissibles=4,
+        nb_denses=2,
+        taille_min=30,
+        taille_max=300,
+        forcer_meme_taille=False
+    )
             
 
     
