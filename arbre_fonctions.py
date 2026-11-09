@@ -320,7 +320,6 @@ def H_matrice_gain_memoire(A_full, arbre_bloc, aca_function, tol):
 
     return N_h
 
-
 def H_matrix(A_full, arbre_bloc, aca_function, tol):
     """Construit la H-matrice sous forme de dictionnaire.
     Clé   : Tuple (tuple(idx_tau), tuple(idx_sigma))
@@ -386,5 +385,24 @@ def H_matrix_assemblage(H, Npoints):
             H_assemble[indices] = contenu
 
     return H_assemble
+
+def Hmatvec(H, b):
+    # Forcer le type complexe (ou utiliser le type de b s'il est déjà complexe)
+    dtype = np.result_type(b.dtype, np.complex128)
+    result = np.zeros(b.size, dtype=dtype)
+
+    for (idx_tau, idx_sigma), contenu in H.items():
+        tau = list(idx_tau)
+        sigma = list(idx_sigma)
+
+        if isinstance(contenu, tuple):
+            U, V = contenu
+            v_b = V.T @ b[sigma]
+            result[tau] += U @ v_b
+        else:
+            result[tau] += contenu @ b[sigma]
+
+    return result
+
 
 
