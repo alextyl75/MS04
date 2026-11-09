@@ -12,11 +12,12 @@ if test_q1:
     Npoints = 100
     a = 1
     k = 5
-    nq = nq_tilde = 5
+    nq = nq_tilde = 10
     Nleaf = 5
-    tol = 1e-1
 
     ETA = 3
+
+    tol_tab = [1e-1, 1e-2, 1e-3, 1e-4]
 
     # Generation du maillage
     points,segments,milieux,longueurs,normales = fonctions.maillage_segments(Npoints, a, forme="cercle")
@@ -24,20 +25,74 @@ if test_q1:
     arbre_bloc = arbre_fonctions.arbre_bloc_construction(arbre_cluster, ETA)
     A_BEM = fonctions.A_assemble(points, segments, nq, nq_tilde, Npoints, k)
 
-    H = arbre_fonctions.H_matrix(A_BEM, arbre_bloc, fonctions.ACA_complet_tolerance, tol)
+    erreurs_tab = []
 
-    vecteur_rd = np.array([rd.random() for i in range(Npoints)])
+    for tol in tol_tab:
+        H = arbre_fonctions.H_matrix(A_BEM, arbre_bloc, fonctions.ACA_complet_tolerance, tol)
 
-    # Produit matrice-vecteur exact
-    Ax = A_BEM @ vecteur_rd
+        num_vecteurs = 100
+        vecteurs_rd = [
+            np.random.randn(Npoints) + 1j * np.random.randn(Npoints) 
+            for _ in range(num_vecteurs)
+        ]
 
-    # Produit matrice-vecteur H-matrice
-    Hx = arbre_fonctions.Hmatvec(H, vecteur_rd)
+        erreurs_local = []
 
-    # Erreur relative en norme 2 (norme euclidienne)
-    erreur = np.linalg.norm(Ax - Hx) / np.linalg.norm(Ax)
+        for i, x in enumerate(vecteurs_rd):
+            Ax = A_BEM @ x
+            Hx = arbre_fonctions.Hmatvec(H, x)
+            
+            err_rel = np.linalg.norm(Hx - Ax) / np.linalg.norm(Ax)
+            erreurs_local.append(err_rel)
 
-    print(erreur)
+        erreurs_tab.append(erreurs_local)
+
+    erreurs_mat = np.array(erreurs_tab)
+    erreur_mean = np.mean(erreurs_mat, axis=1)
+
+    # ---------------------------------------------------------
+    # Creation de la figure avec espace reserve pour le texte
+    # ---------------------------------------------------------
+    fig, ax = plt.subplots(figsize=(9, 5))
+    
+    # Ajuster les marges pour laisser de la place a droite
+    plt.subplots_adjust(right=0.72)
+
+    # Courbe d'erreur et ligne de reference
+    ax.loglog(tol_tab, erreur_mean, 'o-', color='navy', linewidth=2, label=r"Erreur moyenne $\varepsilon_{mv}$")
+    ax.loglog(tol_tab, tol_tab, 'r--', linewidth=1.5, label=r"Référence $y = \mathrm{tol}$")
+
+    ax.set_xlabel("Tolérance ACA (tol)", fontsize=11)
+    ax.set_ylabel(r"Erreur relative moyenne $\varepsilon_{mv}(x)$", fontsize=11)
+    ax.set_title("Erreur du produit H-matrice-vecteur vs Tolérance ACA", fontsize=12, fontweight='bold')
+    ax.grid(True, which="both", linestyle="--", alpha=0.6)
+    ax.legend(loc="upper left")
+
+    # Inverser l'axe x pour observer la convergence (tol diminue de gauche a droite)
+    ax.invert_xaxis()
+
+    # Formattage du texte des parametres du modele
+    params_text = (
+        "Paramètres du modèle :\n"
+        "─────────────────────\n"
+        f"• Npoints  = {Npoints}\n"
+        f"• Rayon a  = {a}\n"
+        f"• Onde k   = {k}\n"
+        f"• Nleaf    = {Nleaf}\n"
+        f"• ETA (η)  = {ETA}\n"
+        f"• N_vec    = {num_vecteurs}"
+    )
+
+    # Encadre textuel sur le cote droit de la figure
+    fig.text(
+        0.75, 0.5, params_text,
+        fontsize=10,
+        family='monospace',
+        verticalalignment='center',
+        bbox=dict(boxstyle='round,pad=0.6', facecolor='wheat', alpha=0.3, edgecolor='gray')
+    )
+
+    plt.show()
         
 
 
