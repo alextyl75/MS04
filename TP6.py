@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 import random as rd 
 import time 
 
-test_q1_erreur = False
-test_q1_temps = True
+test_q1_erreur = True
+test_q1_temps = False
 
 if test_q1_erreur:
     Npoints = 100
@@ -62,7 +62,6 @@ if test_q1_erreur:
 
     # Courbe d'erreur et ligne de reference
     ax.loglog(tol_tab, erreur_mean, 'o-', color='navy', linewidth=2, label=r"Erreur moyenne $\varepsilon_{mv}$")
-    ax.loglog(tol_tab, tol_tab, 'r--', linewidth=1.5, label=r"Référence $y = \mathrm{tol}$")
 
     ax.set_xlabel("Tolérance ACA (tol)", fontsize=11)
     ax.set_ylabel(r"Erreur relative moyenne $\varepsilon_{mv}(x)$", fontsize=11)
