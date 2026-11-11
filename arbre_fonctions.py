@@ -1,9 +1,10 @@
-import fonctions
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.lines import Line2D
 from typing import List, Optional
+
 
 #================== CLASS NOEUD =============
 
@@ -405,4 +406,350 @@ def Hmatvec(H, b):
     return result
 
 
+
+def H_matrix_light(
+    arbre_bloc,
+    aca_function,
+    tol,
+    points,
+    segments,
+    k,
+    x_quad,
+    w,
+    x_quad_tilde,
+    w_tilde,
+    fonctions=None,
+):
+    """Construit la H-matrice sous forme de dictionnaire sans jamais assembler la matrice complète.
+    Clé   : Tuple (tuple(idx_tau), tuple(idx_sigma))
+    Valeur: - (U, V) pour un bloc admissible (matrices NumPy de tailles (N, r) et (M, r) avec A_bloc ≈ U @ V.T)
+            - A_ij   pour un bloc dense (matrice NumPy de taille (N, M))
+    """
+    H = {}
+
+    def parcourt(Noeud_bloc):
+        if Noeud_bloc.is_leaf:
+            tau = Noeud_bloc.tau
+            sigma = Noeud_bloc.sigma
+
+            # Extraction des indices globaux des segments du bloc
+            idx_tau = [p[0] for p in tau.list_pts]
+            idx_sigma = [p[0] for p in sigma.list_pts]
+
+            cle = (tuple(idx_tau), tuple(idx_sigma))
+            indices = np.ix_(idx_tau, idx_sigma)
+
+            if Noeud_bloc.type_feuille == "feuille_admissible":
+                u_list, v_list, r = aca_function(
+                    points, segments, k, indices, tol, x_quad, w, x_quad_tilde, w_tilde, fonctions
+                )
+
+                if r > 0:
+                    U = np.column_stack(u_list)
+                    V = np.column_stack(v_list)
+                else:
+                    U = np.zeros((len(idx_tau), 0), dtype=complex)
+                    V = np.zeros((len(idx_sigma), 0), dtype=complex)
+
+                H[cle] = (U, V)
+
+            elif Noeud_bloc.type_feuille == "feuille_dense":
+                H[cle] = A_assemble_bloc(
+                    points, segments, indices, x_quad, w, x_quad_tilde, w_tilde, k, fonctions
+                )
+        else:
+            for fils in Noeud_bloc.fils_list:
+                parcourt(fils)
+
+    racine = arbre_bloc[0] if isinstance(arbre_bloc, list) else arbre_bloc
+    parcourt(racine)
+
+    return H
+
+######################
+#Pour matrice hiérarchiques
+
+
+
+def A_assemble_bloc(points, segments, indices, x_quad, w, x_quad_tilde, w_tilde, k, fonctions=None):
+    """Assemble un bloc dense de la matrice BEM correspondant aux indices (idx_tau, idx_sigma)."""
+    idx_tau = np.asarray(indices[0]).ravel()
+    idx_sigma = np.asarray(indices[1]).ravel()
+    N, M = len(idx_tau), len(idx_sigma)
+
+    nq = len(x_quad)
+    nq_tilde = len(x_quad_tilde)
+    G_func = fonctions
+
+    A = np.zeros((N, M), dtype=complex)
+    gamma_euler = 0.5772156649
+
+    # Pré-calcul des poids combinés
+    W_reg_matrix = np.outer(w, w_tilde)  # shape: (nq, nq_tilde)
+    somme_w_reg = np.sum(W_reg_matrix)
+    const_reg = 1j / 4 - (1 / (2 * np.pi) * (np.log(k / 2) + gamma_euler))
+
+    for i in range(N):
+        ig = idx_tau[i]  # Indice global du segment ligne
+        ai, bi = points[segments[ig][0]], points[segments[ig][1]]
+        vec_i = bi - ai
+        length_i = np.linalg.norm(vec_i)
+        demi_norm_i = 0.5 * length_i
+
+        # Points de quadrature sur le segment ig : shape (nq, 2)
+        x_pts = 0.5 * (ai + bi) + 0.5 * np.outer(x_quad, vec_i)
+
+        for j in range(M):
+            jg = idx_sigma[j]  # Indice global du segment colonne
+
+            if ig == jg:
+                # --- CAS DIAGONAL GLOBAL (Singularité : même segment) ---
+                reg = somme_w_reg * const_reg * (demi_norm_i ** 2)
+
+                Tau_e = vec_i / length_i
+                sing = 0.0
+                for k_index in range(nq):
+                    d_b_x = bi - x_pts[k_index]
+                    d_a_x = ai - x_pts[k_index]
+
+                    term = (
+                        np.dot(d_b_x, Tau_e) * np.log(np.linalg.norm(d_b_x))
+                        - np.dot(d_a_x, Tau_e) * np.log(np.linalg.norm(d_a_x))
+                        - length_i
+                    )
+                    sing += w[k_index] * term
+
+                sing *= -(1 / (2 * np.pi)) * demi_norm_i
+                A[i, j] = sing + reg
+
+            else:
+                # --- CAS HORS-DIAGONALE ---
+                aj, bj = points[segments[jg][0]], points[segments[jg][1]]
+                demi_norm_j = 0.5 * np.linalg.norm(bj - aj)
+
+                # Points de quadrature sur le segment jg : shape (nq_tilde, 2)
+                y_pts = 0.5 * (aj + bj) + 0.5 * np.outer(x_quad_tilde, bj - aj)
+
+                Aij = 0.0j
+                for k_index in range(nq):
+                    for k_tilde_index in range(nq_tilde):
+                        val_G = G_func(x_pts[k_index], y_pts[k_tilde_index], k)
+                        Aij += W_reg_matrix[k_index, k_tilde_index] * val_G
+
+                A[i, j] = Aij * demi_norm_i * demi_norm_j
+
+    return A
+
+
+def calcul_ligne(points, segments, indices, i, x_quad, w, x_quad_tilde, w_tilde, k, fonctions=None):
+    """Calcule la i-ème ligne locale du bloc défini par 'indices'."""
+    idx_tau = np.asarray(indices[0]).ravel()
+    idx_sigma = np.asarray(indices[1]).ravel()
+    M = len(idx_sigma)
+
+    G_func = fonctions
+    ligne = np.zeros(M, dtype=complex)
+
+    # Indice global de la ligne i
+    ig = idx_tau[i]
+    ai = points[segments[ig][0]]
+    bi = points[segments[ig][1]]
+    vec_i = bi - ai
+    norm_i = np.linalg.norm(vec_i)
+    demi_norm_i = 0.5 * norm_i
+
+    pts_i = 0.5 * (ai + bi) + 0.5 * np.outer(x_quad, vec_i)
+
+    gamma_euler = 0.5772156649
+    constante_reg = 4 * (1j / 4 - (1 / (2 * np.pi) * (np.log(k / 2) + gamma_euler))) * (demi_norm_i ** 2)
+
+    for j in range(M):
+        jg = idx_sigma[j]  # Indice global de la colonne j
+
+        if ig == jg:
+            # --- TERME SINGULIER (Diagonale globale) ---
+            sing = 0.0
+            Tau_e = vec_i / norm_i
+
+            for k_idx in range(len(x_quad)):
+                d_b_x = bi - pts_i[k_idx]
+                d_a_x = ai - pts_i[k_idx]
+
+                terme = (
+                    np.dot(d_b_x, Tau_e) * np.log(np.linalg.norm(d_b_x))
+                    - np.dot(d_a_x, Tau_e) * np.log(np.linalg.norm(d_a_x))
+                    - norm_i
+                )
+                sing += w[k_idx] * terme
+
+            sing *= -(1 / (2 * np.pi)) * demi_norm_i
+            ligne[j] = sing + constante_reg
+
+        else:
+            # --- TERME RÉGULIER (Hors-diagonale) ---
+            aj = points[segments[jg][0]]
+            bj = points[segments[jg][1]]
+            demi_norm_j = 0.5 * np.linalg.norm(bj - aj)
+
+            pts_j = 0.5 * (aj + bj) + 0.5 * np.outer(x_quad_tilde, bj - aj)
+
+            Aij = 0.0j
+            for k_idx in range(len(x_quad)):
+                for k_tilde_idx in range(len(x_quad_tilde)):
+                    Aij += w[k_idx] * w_tilde[k_tilde_idx] * G_func(pts_i[k_idx], pts_j[k_tilde_idx], k)
+
+            ligne[j] = Aij * demi_norm_i * demi_norm_j
+
+    return ligne
+
+
+def calcul_colonne(points, segments, indices, j, x_quad, w, x_quad_tilde, w_tilde, k, fonctions=None):
+    """Calcule la j-ème colonne locale du bloc défini par 'indices'."""
+    idx_tau = np.asarray(indices[0]).ravel()
+    idx_sigma = np.asarray(indices[1]).ravel()
+    N = len(idx_tau)
+
+    G_func = fonctions
+    colonne = np.zeros(N, dtype=complex)
+
+    # Indice global de la colonne j
+    jg = idx_sigma[j]
+    aj = points[segments[jg][0]]
+    bj = points[segments[jg][1]]
+    vec_j = bj - aj
+    norm_j = np.linalg.norm(vec_j)
+    demi_norm_j = 0.5 * norm_j
+
+    pts_j = 0.5 * (aj + bj) + 0.5 * np.outer(x_quad_tilde, vec_j)
+
+    gamma_euler = 0.5772156649
+
+    for i in range(N):
+        ig = idx_tau[i]  # Indice global de la ligne i
+
+        if ig == jg:
+            # --- TERME SINGULIER (Diagonale globale) ---
+            Tau_e = vec_j / norm_j
+            sing = 0.0
+            pts_i = 0.5 * (aj + bj) + 0.5 * np.outer(x_quad, vec_j)
+
+            for k_idx in range(len(x_quad)):
+                d_b_x = bj - pts_i[k_idx]
+                d_a_x = aj - pts_i[k_idx]
+
+                terme = (
+                    np.dot(d_b_x, Tau_e) * np.log(np.linalg.norm(d_b_x))
+                    - np.dot(d_a_x, Tau_e) * np.log(np.linalg.norm(d_a_x))
+                    - norm_j
+                )
+                sing += w[k_idx] * terme
+
+            sing *= -(1 / (2 * np.pi)) * demi_norm_j
+            constante_reg = 4 * (1j / 4 - (1 / (2 * np.pi) * (np.log(k / 2) + gamma_euler))) * (demi_norm_j ** 2)
+            colonne[i] = sing + constante_reg
+
+        else:
+            # --- TERME RÉGULIER (Hors-diagonale) ---
+            ai = points[segments[ig][0]]
+            bi = points[segments[ig][1]]
+            demi_norm_i = 0.5 * np.linalg.norm(bi - ai)
+
+            pts_i = 0.5 * (ai + bi) + 0.5 * np.outer(x_quad, bi - ai)
+
+            Aij = 0.0j
+            for k_idx in range(len(x_quad)):
+                for k_tilde_idx in range(len(x_quad_tilde)):
+                    Aij += w[k_idx] * w_tilde[k_tilde_idx] * G_func(pts_i[k_idx], pts_j[k_tilde_idx], k)
+
+            colonne[i] = Aij * demi_norm_i * demi_norm_j
+
+    return colonne
+
+
+def ACA_partiel_free_bloc(points, segments, k, indices, epsilon, x_quad, w, x_quad_tilde, w_tilde, fonctions=None):
+    """ACA partiel sans assemblage complet (matrix-free).
+    Renvoie (u_k_used, v_k_used, r) tels que A_bloc ≈ U @ V.T
+    """
+    idx_tau = np.asarray(indices[0]).ravel()
+    idx_sigma = np.asarray(indices[1]).ravel()
+    N, M = len(idx_tau), len(idx_sigma)
+    max_rank = min(N, M)
+
+    A_approx_norm = 0.0
+    next_indice = 0
+    index_used = []
+    cols_used = []
+    v_k_used = []
+    u_k_used = []
+    norm_prod_uv = 0.0
+
+    def ACA_partiel_step(index_ligne):
+        # 1. Calcul de la ligne résiduelle R[index_ligne, :]
+        res_row = calcul_ligne(
+            points, segments, indices, index_ligne, x_quad, w, x_quad_tilde, w_tilde, k, fonctions
+        )
+        for u, v in zip(u_k_used, v_k_used):
+            res_row -= u[index_ligne] * v
+
+        # 2. Recherche du pivot maximal dans la ligne résiduelle
+        abs_res_row = np.abs(res_row)
+        abs_res_row[cols_used] = -1.0
+        j = int(np.argmax(abs_res_row))
+        pivot = res_row[j]
+
+        index_used.append(index_ligne)
+
+        if np.abs(pivot) < 1e-12:
+            u_k = np.zeros(N, dtype=complex)
+            v_k = np.zeros(M, dtype=complex)
+            # Choisir une prochaine ligne non encore visitée si possible
+            remaining_rows = [ idx for idx in range(N) if idx not in index_used ]
+            next_indice_val = remaining_rows[0] if remaining_rows else 0
+        else:
+            # 3. Calcul de la colonne résiduelle R[:, j]
+            res_col = calcul_colonne(
+                points, segments, indices, j, x_quad, w, x_quad_tilde, w_tilde, k, fonctions
+            )
+            for u, v in zip(u_k_used, v_k_used):
+                res_col -= u * v[j]
+
+            u_k = res_col / pivot
+            v_k = res_row
+            cols_used.append(j)
+
+            # 4. Prochaine ligne pivot choisie sur le maximum de |u_k|
+            col_abs = np.abs(u_k).copy()
+            col_abs[index_used] = -1.0
+            next_indice_val = int(np.argmax(col_abs))
+
+        u_k_used.append(u_k)
+        v_k_used.append(v_k)
+        return next_indice_val
+
+    for step in range(1, max_rank + 1):
+        next_indice = ACA_partiel_step(next_indice)
+
+        u_k = u_k_used[-1]
+        v_k = v_k_used[-1]
+        norm_prod_uv = np.linalg.norm(u_k) * np.linalg.norm(v_k)
+
+        if norm_prod_uv == 0.0:
+            u_k_used.pop()
+            v_k_used.pop()
+            break
+
+        # Mise à jour récursive de la norme de Frobenius ||A_k||_F
+        sum_norm = 0.0j
+        for l in range(len(u_k_used) - 1):
+            sum_norm += np.vdot(u_k_used[l], u_k) * np.vdot(v_k_used[l], v_k)
+
+        valeur_sous_racine = A_approx_norm ** 2 + 2.0 * sum_norm.real + norm_prod_uv ** 2
+        A_approx_norm = np.sqrt(max(0.0, valeur_sous_racine))
+
+        # Critère d'arrêt relatif
+        if norm_prod_uv < epsilon * A_approx_norm:
+            break
+
+    r = len(u_k_used)
+    return u_k_used, v_k_used, r
 

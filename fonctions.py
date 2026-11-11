@@ -227,62 +227,6 @@ def B(points, segments, N, nq, k):
     return b
 
 def A_assemble(points, segments, nq, nq_tilde, N, k):
-    # A = np.zeros((N,N), dtype=complex)
-    # print("A",np.shape(A))
-    # print("N", N)
-
-    # gamma_euler = 0.5772156649
-
-    # x_quad, w = np.polynomial.legendre.leggauss(nq)
-    # x_quad_tilde, w_tilde = np.polynomial.legendre.leggauss(nq_tilde)
-
-    # print("debut")
-    # for i in range(N):
-
-    #     ai, bi = points[segments[i][0]], points[segments[i][1]]
-
-    #     for j in range(N):
-
-    #         Aij = 0
-
-    #         if i==j: #cas de la singularité gamme_e = gamme_é
-                
-    #             # On calcule séparemment la partie singulière et la partie régulière
-    #             reg = 0
-    #             sing = 0
-
-    #             for k_index in range(nq):
-    #                 for k_tilde_index in range(nq_tilde):
-    #                     reg += w[k_index] * w_tilde[k_tilde_index] * (1j/4 - (1/(2*np.pi) * (np.log(k/2) + gamma_euler)))
-    #             reg *= (0.5 * np.linalg.norm(bi-ai))**2
-
-    #             # On intégre ensuite la singularité analytiquement l'intégrale au sens de y puis on intégre au sens de x grâce à une quad
-    #             for k_index in range(nq):
-    #                 d_b_x = bi - (0.5 * (ai+bi) + 0.5 * x_quad[k_index] * (bi-ai))
-    #                 d_a_x = ai - (0.5 * (ai+bi) + 0.5 * x_quad[k_index] * (bi-ai))
-    #                 Tau_e = (bi - ai)/np.linalg.norm(bi-ai)
-
-    #                 sing += w[k_index] * (np.dot(d_b_x, Tau_e) * np.log(np.linalg.norm(d_b_x)) - np.dot(d_a_x, Tau_e) * np.log(np.linalg.norm(d_a_x)) - np.linalg.norm(bi-ai))
-
-    #             sing *= -(1/(2*np.pi))
-    #             sing *= (0.5 * np.linalg.norm(bi-ai))
-
-    #             Aij = sing + reg
-
-    #         else :
-    #             aj, bj = points[segments[j][0]], points[segments[j][1]]
-
-    #             for k_index in range(nq):
-    #                 for k_tilde_index in range(nq_tilde):
-    #                     Aij += w[k_index] * w_tilde[k_tilde_index] * G(0.5 * (ai+bi) + 0.5 * x_quad[k_index] * (bi-ai) , 0.5 * (aj+bj) + 0.5 * x_quad_tilde[k_tilde_index] * (bj-aj), k)
-
-    #             Aij *= 0.5 * np.linalg.norm(bi-ai)
-    #             Aij *= 0.5 * np.linalg.norm(bj-aj)
-
-            
-    #         A[i][j] = Aij
-    # print("fin")
-
     A = np.zeros((N, N), dtype=complex)
     print("A", np.shape(A))
     print("N", N)

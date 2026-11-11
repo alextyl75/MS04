@@ -6,7 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random as rd 
 
-test_q1 = True
+test_q1 = False
+test_q5 = True
 
 if test_q1:
     Npoints = 100
@@ -94,6 +95,97 @@ if test_q1:
 
     plt.show()
         
+
+
+
+
+
+if test_q5:
+    Npoints = 400
+    a = 1
+    k = 5
+    nq = nq_tilde = 10
+    Nleaf = 5
+
+    ETA = 3
+    # Generation du maillage
+    points, segments, milieux, longueurs, normales = fonctions.maillage_segments(Npoints, a, forme="cercle")
+    arbre_cluster = arbre_fonctions.construction_arbre(Npoints, Nleaf, points, strat="mediane")
+    arbre_bloc = arbre_fonctions.arbre_bloc_construction(arbre_cluster, ETA)
+
+    x_quad, w = np.polynomial.legendre.leggauss(nq)
+    x_quad_tilde, w_tilde = np.polynomial.legendre.leggauss(nq_tilde)
+
+    print("Construction de la H-Matrice...")
+    H = arbre_fonctions.H_matrix_light(
+        arbre_bloc=arbre_bloc,
+        aca_function=arbre_fonctions.ACA_partiel_free_bloc,
+        tol=1e-4,
+        points=points,
+        segments=segments,
+        k=k,
+        x_quad=x_quad,
+        w=w,
+        x_quad_tilde=x_quad_tilde,
+        w_tilde=w_tilde,
+        fonctions=fonctions.G,  # ou fonctions selon votre implémentation
+    )
+
+    # ==========================================
+    # TESTS DE VALIDATION (Précision et Mémoire)
+    # ==========================================
+    print("\n--- Début du test de validation ---")
+    
+    # 1. Vecteur complexe aléatoire
+    np.random.seed(42)
+    x = np.random.rand(Npoints) + 1j * np.random.rand(Npoints)
+
+    # 2. Produit Matrice-Vecteur H-Matrice
+    y_H = arbre_fonctions.Hmatvec(H, x)
+
+    # 3. Assemblage de la matrice PLEINE globale pour référence
+    indices_full = np.ix_(np.arange(Npoints), np.arange(Npoints))
+    A_full = arbre_fonctions.A_assemble_bloc(
+        points, segments, indices_full, 
+        x_quad, w, x_quad_tilde, w_tilde, 
+        k, fonctions=fonctions.G
+    )
+
+    # 4. Produit Matrice-Vecteur classique
+    y_full = A_full @ x
+
+    # 5. Calcul de l'erreur relative globale
+    erreur_relative = np.linalg.norm(y_H - y_full) / np.linalg.norm(y_full)
+    print(f"Erreur relative ||y_H - y_full|| / ||y_full|| : {erreur_relative:.2e}")
+    
+    # Le test passe si l'erreur est globalement du même ordre de grandeur que 'tol'
+    if erreur_relative < 1e-3:
+        print("✅ Test de précision validé !")
+    else:
+        print("❌ Problème de précision, l'erreur est trop élevée.")
+
+    # 6. Calcul du taux de compression mémoire
+    mem_full = Npoints * Npoints
+    mem_H = 0
+    nb_admissibles = 0
+    nb_denses = 0
+
+    for cle, bloc in H.items():
+        if isinstance(bloc, tuple):
+            U, V = bloc
+            mem_H += U.size + V.size
+            nb_admissibles += 1
+        else:
+            mem_H += bloc.size
+            nb_denses += 1
+
+    taux_compression = (1 - mem_H / mem_full) * 100
+    print(f"\n--- Statistiques H-Matrice ---")
+    print(f"Blocs admissibles (rang faible) : {nb_admissibles}")
+    print(f"Blocs denses (exacts)           : {nb_denses}")
+    print(f"Éléments stockés (H-Matrice)    : {mem_H}")
+    print(f"Éléments stockés (Matrice N x N): {mem_full}")
+    print(f"Taux de compression mémoire     : {taux_compression:.2f}%")
 
 
 
