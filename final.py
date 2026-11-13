@@ -840,3 +840,32 @@ def H_matrix_light(
         H = dict(resultats)
 
     return H
+
+# second membre BEM
+
+def uinc(x, k):
+    return np.exp(-1j * k * x[0])
+
+def quad_gauss_legendre(f, a, b, nq):
+    sum = 0
+    xi, w = np.polynomial.legendre.leggauss(nq)
+
+    for i in range(nq):
+        sum += w[i] * f( 0.5 * (a+b) + 0.5 * xi[i] * (b-a) )
+
+    sum *= 0.5 * np.linalg.norm(b-a)
+
+    return sum
+
+def B(points, segments, N, nq, k):
+    b = np.zeros(N, dtype=complex)
+    print("b", np.shape(b))
+    print("N", N)
+    for i in range(N):
+        b[i] = -quad_gauss_legendre( #chatgpt pour la syntaxe ici
+            lambda x: uinc(x, k),
+            points[segments[i][0]],
+            points[segments[i][1]],
+            nq
+        )
+    return b
